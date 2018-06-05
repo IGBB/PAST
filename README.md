@@ -1,3 +1,3 @@
 # test
-A test repo for learning git
-The terminator is alive
+GrainColorGLMStats <- GrainColorGLMStats[!(GrainColorGLMStats$marker_F == "NaN"), ] #This line of code filters out all "NaN" data
+
