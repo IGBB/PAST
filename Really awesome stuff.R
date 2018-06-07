@@ -1,23 +1,19 @@
-# Include libraries so that others know what dependencies to load
 library(tidyverse)
 
-# Include data loading as generic names, since not every experiement will be grain color
-# We'll change the way this works later to be user input
 effects = read.table("GrainColorGLMAllEffHiMAF.txt", header=TRUE)
 stats = read.table("GrainColorGLMStatsHiMAF.txt", header=TRUE)
 
-
-# This array has all the odd and even integers. You can reduce some of your code by using it like I did below.
-oddvals <- seq(1, nrow(effects), by = 2)
-evenvals <- seq(2, nrow(effects), by = 2)
-rows = nrow(effects)
-
-# In general, you can do most things in R without loops. You can get the odd values by doing what I've written below.
-for(i in 1:rows)
-  merge(effects[oddvals[i], ], effects[evenvals[i], ], by = "Marker")
-
-# Get odd lines from effects and even lines from effects
+#Get all the even and odd number of rows in effects to later combine into one
 odd_effects<-effects[seq(1, nrow(effects), by = 2),]
 even_effects<-effects[seq(2, nrow(effects), by = 2),]
 
-GrainColorGLMStats <- GrainColorGLMStats[!(GrainColorGLMStats$marker_F == "NaN"), ]
+#Combine the odd and even rows of the effects datasheet and delete unecessary columns
+CombinedEff <- left_join(odd_effects, even_effects, by = "Marker", "Trait")
+CombinedEff <- subset(CombinedEff, select = -c(Trait.y, Chr.y, Pos.y, Estimate.y))
+
+#Combine Stats and CombinedEff to get all datasheets into one and delete unecessary columns
+All <- left_join(stats, CombinedEff, by = "Marker")
+All <- subset(All, select = -c(Trait.x, Chr.x, Pos.x))
+
+#Remove all NaN Data due to it interfering with Calculations
+All <- All[!(All$marker_F == "NaN"), ]
