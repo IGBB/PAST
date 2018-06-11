@@ -1,1 +1,2 @@
-# Pathway Association Study Tool (PAST)
+# PAST
+Pathway Association Study Tool
