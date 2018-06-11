@@ -4,6 +4,15 @@ setwd("/Users/Mason/Downloads")
 effects = read.table("GrainColorGLMAllEffHiMAF.txt", header=TRUE)
 stats = read.table("GrainColorGLMStatsHiMAF.txt", header=TRUE)
 
+#Delete all markers in effects and stats with more or less alleles than 2
+numbers <- effects %>% group_by(Marker) %>% summarise(count=n())
+baddata <- numbers %>% filter(count != 2)
+effects <- effects[!(effects$Marker %in% baddata$Marker),]
+stats <- stats[!(stats$Marker %in% baddata$Marker),]
+
+#Remove all NaN data due to it interfering with calculations
+stats <- stats[!(stats$marker_F == "NaN"), ]
+
 #Get all the even and odd number of rows in effects to later combine into one
 odd_effects<-effects[seq(1, nrow(effects), by = 2),]
 even_effects<-effects[seq(2, nrow(effects), by = 2),]
@@ -17,12 +26,9 @@ CombinedEff <- subset(CombinedEff, select = -c(Trait.y, Chr.y, Pos.y))
 All <- left_join(stats, CombinedEff, by = "Marker")
 All <- subset(All, select = -c(Trait.x, Chr.x, Pos.x))
 
-#Remove all NaN Data due to it interfering with Calculations
-All <- All[!(All$marker_F == "NaN"), ]
-
 #Going to go ahead and remove all unneeded datasheets
-numbers <- effects %>% group_by(Marker) %>% summarise(count=n())
-
-filteredstats <- stats[!(stats$marker_F == "NaN"), ]
-
-effectstest <- effects[!()]
+rm(numbers)
+rm(even_effects)
+rm(odd_effects)
+rm(baddata)
+rm(CombinedEff)
