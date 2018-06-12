@@ -1,0 +1,14 @@
+Package: past
+Type: Package
+Title: Pathway Association Study Tool (PAST)
+Version: 0.1.0
+Author: Mason DeOrnellis, Adam Thrash
+Maintainer: Adam Thrash <thrash@igbb.msstate.edu>
+Description: Write this later.
+License: GPLv3
+Encoding: UTF-8
+LazyData: true
+Suggests: knitr,
+    rmarkdown,
+    tidyverse
+VignetteBuilder: knitr

@@ -1,0 +1,27 @@
+---
+title: "Demonstration"
+author: "Adam Thrashr"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+# Using PAST
+
+The following block of code calls the `merge()` function of PAST with example data. This documentation will be extended as the software is developed.
+
+```{r}
+library(tidyverse)
+library(past)
+all_data<-merge_data("../example/GrainColorGLMStatsHiMAF.txt", "../example/GrainColorGLMAllEffHiMAF.txt")
+```
