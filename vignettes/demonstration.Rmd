@@ -18,10 +18,11 @@ knitr::opts_chunk$set(
 
 # Using PAST
 
-The following block of code calls the `merge()` function of PAST with example data. This documentation will be extended as the software is developed.
+The following block of code calls the `merge()` function of PAST with example data and loads the LD data. This documentation will be extended as the software is developed.
 
 ```{r}
 library(tidyverse)
 library(past)
 all_data<-merge_data("../example/GrainColorGLMStatsHiMAF.txt", "../example/GrainColorGLMAllEffHiMAF.txt")
+LD<-parse_LD("../example/KernelColorLD.txt.gz") # parse_LD can take gzip-compressed files or plain text
 ```
