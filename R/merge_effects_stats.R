@@ -26,17 +26,14 @@ merge_data <- function(stats_file, effects_file) {
   effects <- left_join(odd_effects, even_effects, by = "Marker", "Trait")
   effects <- subset(effects, select = -c(Trait.y, Chr.y, Pos.y))
 
-  # Merge stats and effects
-  all_data <- left_join(stats, effects, by = "Marker")
-  all_data <- subset(all_data, select = -c(Trait.x, Chr.x, Pos.x, dom_F, dom_p, add_F, add_p, marker_MS, error_MS, model_df, model_MS))
-
   # Delete temporary dataframes
   rm(non_biallelic)
   rm(even_effects)
   rm(odd_effects)
 
-  # return merged data
-  return(all_data)
+  # Merge stats and effects and return
+  all_data <- left_join(stats, effects, by = "Marker")
+  subset(all_data, select = -c(Trait.x, Chr.x, Pos.x, dom_F, dom_p, add_F, add_p, marker_MS, error_MS, model_df, model_MS))
 }
 
 
