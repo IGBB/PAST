@@ -10,7 +10,7 @@ LD_downstream <- LD_file[[2]]
 
 for (name in names(LD_upstream)){
   temp_data <- LD_upstream[[name]]
-  temp_data <- temp_data[(temp_data$Position1 %in% all_data$Pos),]
+  LD_upstream[[name]] <- temp_data[(temp_data$Position1 %in% all_data$Pos),]
 }
 LD_file <- LD_file[[1]][["1"]]
 LD_file <- LD_file[(LD_file$Position1 %in% all_data$Pos),]
