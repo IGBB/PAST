@@ -1,4 +1,4 @@
-parse_SNP <- function(LD_file) {
+parse_SNP <- function(all_data, LD_file) {
 
   #Give upstream and downstream their own variables to make life easier
   LD_upstream <- LD_file[[1]]
