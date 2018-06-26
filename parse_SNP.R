@@ -26,12 +26,17 @@ parse_SNP <- function(all_data, LD) {
     index <- c(0, cumsum(abs(diff(block_SNPs$Site2)) > 1))
     blocks <- split(block_SNPs, index)
   
-    test_data <- merge(block_SNPs, all_data, by.x = "Marker1", by.y = "Marker") %>%
-      select(Locus1, Position1, Position2, Site2, Dist_bp, R.2, p, Estimate.x, Marker2)
-    test_data <- merge(test_data, all_data, by.x = "Marker2", by.y = "Marker")
+    # merge the block SNPs with the data in all data to find the data for the markers in block SNPs
+    test_data <- merge(block_SNPs, all_data, by.x = "Marker1", by.y = "Marker") %>% 
+      mutate(SNP1_pval = p, SNP1_effect = Estimate.x) %>% 
+      select(Locus1, Position1, Position2, Site1, Site2, Dist_bp, R.2, Marker1, SNP1_pval, SNP1_effect, Marker2)
     
-    test_data <- mutate(test_data, SNP1_pval = test_data$p)
-    test_data <- mutate(test_data, SNP1_effect = test_data$Estimate.x)
+    # merge the block SNPs with all data to get the marker data for Marker2 SNPs
+    test_data <- merge(test_data, all_data, by.x = "Marker2", by.y = "Marker") %>%
+      mutate(SNP2_pval = p, SNP2_effect = Estimate.x) %>%
+      select(Locus1, Position1, Position2, Site1, Site2, Dist_bp, R.2, Marker1, SNP1_pval, SNP1_effect, Marker2, SNP2_pval, SNP2_effect)
+    
+   # get all the single SNPs in a data frame by themselves
     single_SNPs <- chr_linked %>% group_by(Position1) %>% summarise(count = n()) %>% filter(count == 1)
     
     ## Last two steps are below this line. All your stuff should be above this.
