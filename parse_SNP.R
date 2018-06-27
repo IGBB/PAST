@@ -41,12 +41,13 @@ parse_SNP <- function(all_data, LD) {
      positions <- block_SNPs %>% group_by(Position1) %>% summarise(count = n())
      
      # WHERE ISSUE IS
-     for(pos in positions){
+     for(pos in positions$Position1){
        positions_block_SNPs <- block_SNPs %>% filter(Position1 == pos)
+       index <- c(0, cumsum(abs(diff(positions_block_SNPs$Site2)) > 1))
+    blocks <- split(positions_block_SNPs, index)
      }
     
-     index <- c(0, cumsum(abs(diff(block_SNPs$Site2)) > 1))
-    blocks <- split(block_SNPs, index)
+     
     
    # get all the single SNPs in a data frame by themselves
     single_SNPs <- chr_linked %>% group_by(Position1) %>% summarise(count = n()) %>% filter(count == 1)
