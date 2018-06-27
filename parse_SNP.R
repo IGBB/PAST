@@ -25,6 +25,8 @@ parse_SNP <- function(all_data, LD) {
     block_SNPs <- chr_linked %>% group_by(Marker1) %>% summarise(count = n()) %>% filter(count > 1)
     block_SNPs <- chr_linked %>% filter(Marker1 %in% block_SNPs$Marker1)
     
+   
+    
     # merge the block SNPs with the data in all data to find the data for the markers in block SNPs
     block_SNPs <- merge(block_SNPs, all_data, by.x = "Marker1", by.y = "Marker") %>% 
       mutate(SNP1_pval = p, SNP1_effect = Estimate.x) %>% 
@@ -35,7 +37,15 @@ parse_SNP <- function(all_data, LD) {
       mutate(SNP2_pval = p, SNP2_effect = Estimate.x) %>%
       select(Locus1, Position1, Position2, Site1, Site2, Dist_bp, R.2, Marker1, SNP1_pval, SNP1_effect, Marker2, SNP2_pval, SNP2_effect)
     
-    index <- c(0, cumsum(abs(diff(block_SNPs$Site2)) > 1))
+    # find all unique positions in block_SNPs
+     positions <- block_SNPs %>% group_by(Position1) %>% summarise(count = n())
+     
+     # WHERE ISSUE IS
+     for(pos in positions){
+       positions_block_SNPs <- block_SNPs %>% filter(Position1 == pos)
+     }
+    
+     index <- c(0, cumsum(abs(diff(block_SNPs$Site2)) > 1))
     blocks <- split(block_SNPs, index)
     
    # get all the single SNPs in a data frame by themselves
@@ -83,6 +93,22 @@ parse_SNP <- function(all_data, LD) {
     
     index <- c(0, cumsum(abs(diff(block_SNPs$Site2)) > 1))
     blocks <- split(block_SNPs, index)
+   
+    for (stuff in names(blocks)){
+      temp_stuff <- blocks[[stuff]]
+      negative <- sum(temp_stuff$SNP1_effect < 0)
+      positive <- sum(temp_stuff$SNP1_effect > 0)
+      if (positive > negative){ #Positive
+        print("Positive")
+        order(-temp_stuff$SNP1_effect)
+      } else if (negative > positive){ #Negative
+        print("Negative")
+      } else if (negative == positive){ #Equal
+        print ("Equal")
+      }
+      
+      
+    }
     
     # get all the single SNPs in a data frame by themselves
     single_SNPs <- chr_linked %>% group_by(Position1) %>% summarise(count = n()) %>% filter(count == 1)
