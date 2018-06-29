@@ -30,28 +30,47 @@ parse_SNP <- function(all_data, LD) {
      positions <- block_SNPs %>% group_by(Position1) %>% summarise(count = n())
      
      # begin block SNP loops
-     for(pos in positions$Position1){
+    for(pos in positions$Position1){
        positions_block_SNPs <- block_SNPs %>% filter(Position1 == pos)
        index <- c(0, cumsum(abs(diff(positions_block_SNPs$Site2)) > 1))
-    blocks <- split(positions_block_SNPs, index)
-    for (block_name in names(blocks)){
-      block <- blocks[[block_name]]
+       blocks <- split(positions_block_SNPs, index)
+      for (block_name in names(blocks)){
+        block <- blocks[[block_name]]
+        
+        # merge block and positions by Position1 data and rename count to linkedSNP_count
+        block <- merge(block, positions, by = "Position1") %>% mutate(linkedSNP_count = count) %>% select(-count)
       
-      # merge block and positions by Position1 data and rename count to linkedSNP_count
-      block <- merge(block, positions, by = "Position1") %>% mutate(linkedSNP_count = count) %>% select(-count)
+        # merge the block SNPs with the data in all data to find the data for the markers in block SNPs
+        block <- merge(block, all_data, by.x = "Marker1", by.y = "Marker") %>% 
+          mutate(SNP1_pval = p, SNP1_effect = Estimate.x) %>% 
+          select(Locus1, Position1, Position2, Site1, Site2, Dist_bp, R.2, Marker1, SNP1_pval, SNP1_effect, Marker2, linkedSNP_count)
       
-      # merge the block SNPs with the data in all data to find the data for the markers in block SNPs
-      block <- merge(block, all_data, by.x = "Marker1", by.y = "Marker") %>% 
-        mutate(SNP1_pval = p, SNP1_effect = Estimate.x) %>% 
-        select(Locus1, Position1, Position2, Site1, Site2, Dist_bp, R.2, Marker1, SNP1_pval, SNP1_effect, Marker2, linkedSNP_count)
-      
-      # merge the block SNPs with all data to get the marker data for Marker2 SNPs
-      block <- merge(block, all_data, by.x = "Marker2", by.y = "Marker") %>%
-        mutate(SNP2_pval = p, SNP2_effect = Estimate.x) %>%
-        select(Locus1, Position1, Position2, Site1, Site2, Dist_bp, R.2, Marker1, SNP1_pval, SNP1_effect, Marker2, SNP2_pval, SNP2_effect, linkedSNP_count)
-      
+        # merge the block SNPs with all data to get the marker data for Marker2 SNPs
+        block <- merge(block, all_data, by.x = "Marker2", by.y = "Marker") %>%
+          mutate(SNP2_pval = p, SNP2_effect = Estimate.x) %>%
+          select(Locus1, Position1, Position2, Site1, Site2, Dist_bp, R.2, Marker1, SNP1_pval, SNP1_effect, Marker2, SNP2_pval, SNP2_effect, linkedSNP_count)
+        
+        # count the number of negative/positive effects in each week
+        temp_stuff <- block[[block_name]]
+        negative <- sum(temp_stuff$SNP1_effect < 0)
+        positive <- sum(temp_stuff$SNP1_effect > 0)
+        
+        if (positive > negative){ #Positive
+          print("Positive")
+          
+          #sort in descending order
+          order(-temp_stuff$SNP1_effect)
+          temp_stuff <- block[[block_name[[1]]]]
+        } else if (negative > positive){ #Negative
+          print("Negative")
+          
+          # sort in ascending order
+          order(temp_stuff$SNP1_effect)
+        } else if (negative == positive){ #Equal
+          print ("Equal")
+        }
+      }
     }
-     }
     
      
     
@@ -102,14 +121,20 @@ parse_SNP <- function(all_data, LD) {
     blocks <- split(block_SNPs, index)
    
     for (stuff in names(blocks)){
-      temp_stuff <- blocks[[stuff]]
+      temp_stuff <- block[[stuff]]
       negative <- sum(temp_stuff$SNP1_effect < 0)
       positive <- sum(temp_stuff$SNP1_effect > 0)
       if (positive > negative){ #Positive
         print("Positive")
+        
+        # put in descending order
         order(-temp_stuff$SNP1_effect)
       } else if (negative > positive){ #Negative
         print("Negative")
+        
+        # put in ascending order
+        order(temp_stuff$SNP1_effect)
+        temp_stuff <- block[[stuff[[1]]]]
       } else if (negative == positive){ #Equal
         print ("Equal")
       }
