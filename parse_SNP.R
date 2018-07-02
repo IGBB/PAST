@@ -24,6 +24,7 @@ parse_SNP <- function(all_data, LD) {
     
     block_SNPs <- chr_linked %>% group_by(Marker1) %>% summarise(count = n()) %>% filter(count > 1)
     block_SNPs <- chr_linked %>% filter(Marker1 %in% block_SNPs$Marker1)
+    block_SNPs <- merge(block_SNPs, positions, by = "Position1")
     
     
     # find all unique positions in block_SNPs
@@ -38,7 +39,7 @@ parse_SNP <- function(all_data, LD) {
         block <- blocks[[block_name]]
         
         # merge block and positions by Position1 data and rename count to linkedSNP_count
-        block <- merge(block, positions, by = "Position1") %>% mutate(linkedSNP_count = count) %>% select(-count)
+        block <- block %>% mutate(linkedSNP_count = nrow(block) %>% select(-count)
       
         # merge the block SNPs with the data in all data to find the data for the markers in block SNPs
         block <- merge(block, all_data, by.x = "Marker1", by.y = "Marker") %>% 
