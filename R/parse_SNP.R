@@ -145,6 +145,7 @@ parse_SNP <- function(all_data, LD, gff_file) {
       # rejoin blocks and overwrite block_SNPs
       # you'll need to run the whole for block in blocks loop
       # to get blocks set up correctly
+      testing <- rbind.fill(blocks)
       
     } # END POSITIONS SNPS LOOP
 
