@@ -50,8 +50,15 @@ parse_SNP <- function(all_data, LD, gff_file) {
 
     # begin block SNP loops
     for(pos in positions$Position1) {
-      pos <- 222541
+      
+      # This number is not in positions or block_SNPs$Position1
+      # pos = 222541
+      # this code should be removed before pushing to master
+      # in general, leaving debugging code in stuff you push to github
+      # is bad practice, but I'm doing it so you can see these examples
 
+      pos = 1969290
+      
       # select all SNPs at pos
       positions_block_SNPs <- block_SNPs %>% filter(Position1 == pos)
 
@@ -61,7 +68,16 @@ parse_SNP <- function(all_data, LD, gff_file) {
 
       # process blocks
       for (block_name in names(blocks)) {
-        block_name <- 222541
+        
+        # I told you wrong on this code
+        # block_name <- 222541
+        
+        # blocks is a list with offsets 0, 1, and 2, so the number
+        # below can be any of those
+        # this code should be removed before pushing to master
+        # in general, leaving debugging code in stuff you push to github
+        # is bad practice, but I'm doing it so you can see these examples
+        block_name = "1"
 
         # get current block
         block <- blocks[[block_name]]
@@ -103,7 +119,7 @@ parse_SNP <- function(all_data, LD, gff_file) {
           # store gene
           blocks[[block_name]] <- find_gene(gff, block)
         } else if (negative == positive) {
-          if(block$SNP1_effect > 0){
+          if(block$SNP1_effect[[1]] > 0){
             # sort in descending order
             block <- block %>% arrange(desc(SNP2_effect))
             
@@ -125,6 +141,9 @@ parse_SNP <- function(all_data, LD, gff_file) {
           }
         }
       } # END BLOCKS LOOP
+      
+      # rejoin blocks and overwrite block_SNPs
+      
     } # END POSITIONS SNPS LOOP
 
     # get all the single SNPs in a data frame by themselves
