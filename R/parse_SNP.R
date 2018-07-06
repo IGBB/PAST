@@ -50,6 +50,8 @@ parse_SNP <- function(all_data, LD, gff_file) {
 
     # begin block SNP loops
     for(pos in positions$Position1) {
+      pos <- 222541
+
       # select all SNPs at pos
       positions_block_SNPs <- block_SNPs %>% filter(Position1 == pos)
 
@@ -59,6 +61,8 @@ parse_SNP <- function(all_data, LD, gff_file) {
 
       # process blocks
       for (block_name in names(blocks)) {
+        block_name <- 222541
+
         # get current block
         block <- blocks[[block_name]]
 
@@ -99,7 +103,26 @@ parse_SNP <- function(all_data, LD, gff_file) {
           # store gene
           blocks[[block_name]] <- find_gene(gff, block)
         } else if (negative == positive) {
-          print ("Equal")
+          if(block$SNP1_effect > 0){
+            # sort in descending order
+            block <- block %>% arrange(desc(SNP2_effect))
+            
+            # get top row
+            block <- block[1,]
+            
+            # store gene
+            blocks[[block_name]] <- find_gene(gff, block)
+          }
+          else{
+            # sort in ascending order
+            block <- block %>% arrange(SNP2_effect)
+            
+            # get top row
+            block <- block[1,]
+            
+            # store gene
+            blocks[[block_name]] <- find_gene(gff, block)
+          }
         }
       } # END BLOCKS LOOP
     } # END POSITIONS SNPS LOOP
@@ -198,7 +221,26 @@ parse_SNP <- function(all_data, LD, gff_file) {
           # store gene
           blocks[[block_name]] <- find_gene(gff, block)
         } else if (negative == positive) {
-          print ("Equal")
+          if (block$SNP1_effect >0){
+            # sort in descending order
+            block <- block %>% arrange(desc(SNP2_effect))
+            
+            # get top row
+            block <- block[1,]
+            
+            # store gene
+            blocks[[block_name]] <- find_gene(gff, block)
+          }
+          else{
+            # sort in ascending order
+            block <- block %>% arrange(SNP2_effect)
+            
+            # get top row
+            block <- block[1,]
+            
+            # store gene
+            blocks[[block_name]] <- find_gene(gff, block)
+          }
         }
       } # END BLOCKS LOOP
     } # END POSITIONS SNPS LOOP
