@@ -143,6 +143,8 @@ parse_SNP <- function(all_data, LD, gff_file) {
       } # END BLOCKS LOOP
       
       # rejoin blocks and overwrite block_SNPs
+      # you'll need to run the whole for block in blocks loop
+      # to get blocks set up correctly
       
     } # END POSITIONS SNPS LOOP
 
