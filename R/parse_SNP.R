@@ -48,17 +48,12 @@ parse_SNP <- function(all_data, LD, gff_file) {
     # find all unique positions in block_SNPs
     positions <- block_SNPs %>% group_by(Position1) %>% summarise(count = n())
 
+    # initialize block genes
+    block_genes = NULL
+    
     # begin block SNP loops
     for(pos in positions$Position1) {
-      
-      # This number is not in positions or block_SNPs$Position1
-      # pos = 222541
-      # this code should be removed before pushing to master
-      # in general, leaving debugging code in stuff you push to github
-      # is bad practice, but I'm doing it so you can see these examples
 
-      pos = 1969290
-      
       # select all SNPs at pos
       positions_block_SNPs <- block_SNPs %>% filter(Position1 == pos)
 
@@ -68,16 +63,6 @@ parse_SNP <- function(all_data, LD, gff_file) {
 
       # process blocks
       for (block_name in names(blocks)) {
-        
-        # I told you wrong on this code
-        # block_name <- 222541
-        
-        # blocks is a list with offsets 0, 1, and 2, so the number
-        # below can be any of those
-        # this code should be removed before pushing to master
-        # in general, leaving debugging code in stuff you push to github
-        # is bad practice, but I'm doing it so you can see these examples
-        block_name = "1"
 
         # get current block
         block <- blocks[[block_name]]
@@ -145,7 +130,8 @@ parse_SNP <- function(all_data, LD, gff_file) {
       # rejoin blocks and overwrite block_SNPs
       # you'll need to run the whole for block in blocks loop
       # to get blocks set up correctly
-      testing <- rbind.fill(blocks)
+      blocks <- rbind.fill(blocks)
+      block_genes <- rbind(block_genes, blocks)
       
     } # END POSITIONS SNPS LOOP
 
