@@ -14,7 +14,7 @@ merge_data <- function(stats_file, effects_file) {
   effects = read.table(effects_file, header = TRUE, sep = "\t")
 
   # Delete all markers in effects and stats with more or less alleles than 2
-  non_biallelic <- effects %>% group_by(Marker) %>% summarise(count=n()) %>% filter(count != 2)
+  non_biallelic <- effects %>% group_by(Marker) %>% dplyr::summarise(count=n()) %>% filter(count != 2)
   effects <- effects %>% filter(!(effects$Marker %in% non_biallelic$Marker), Locus != 0)
   stats <- stats %>% filter(!(stats$Marker %in% non_biallelic$Marker))
 

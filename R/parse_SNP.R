@@ -42,11 +42,11 @@ parse_SNP <- function(all_data, LD, gff_file) {
     chr_linked <- temp_data %>% arrange(Position1) %>% filter(R.2 >= 0.8)
 
     # get SNPs that need to be parsed by block
-    block_SNPs <- chr_linked %>% group_by(Marker1) %>% summarise(count = n()) %>% filter(count > 1)
+    block_SNPs <- chr_linked %>% group_by(Marker1) %>% dplyr::summarise(count = n()) %>% filter(count > 1)
     block_SNPs <- chr_linked %>% filter(Marker1 %in% block_SNPs$Marker1)
 
     # find all unique positions in block_SNPs
-    positions <- block_SNPs %>% group_by(Position1) %>% summarise(count = n())
+    positions <- block_SNPs %>% group_by(Position1) %>% dplyr::summarise(count = n())
 
     # initialize block genes
     block_genes = NULL
@@ -136,7 +136,7 @@ parse_SNP <- function(all_data, LD, gff_file) {
     } # END POSITIONS SNPS LOOP
 
     # get all the single SNPs in a data frame by themselves
-    single_SNPs <- chr_linked %>% group_by(Position1) %>% summarise(count = n()) %>% filter(count == 1)
+    single_SNPs <- chr_linked %>% group_by(Position1) %>% dplyr::summarise(count = n()) %>% filter(count == 1)
 
     # get genes here
 
@@ -172,11 +172,11 @@ parse_SNP <- function(all_data, LD, gff_file) {
     chr_linked <- temp_data %>% arrange(Position1) %>% filter(R.2 >= 0.8)
 
     # get SNPs that need to be parsed by block
-    block_SNPs <- chr_linked %>% group_by(Marker1) %>% summarise(count = n()) %>% filter(count > 1)
+    block_SNPs <- chr_linked %>% group_by(Marker1) %>% dplyr::summarise(count = n()) %>% filter(count > 1)
     block_SNPs <- chr_linked %>% filter(Marker1 %in% block_SNPs$Marker1)
 
     # find all unique positions in block_SNPs
-    positions <- block_SNPs %>% group_by(Position1) %>% summarise(count = n())
+    positions <- block_SNPs %>% group_by(Position1) %>% dplyr::summarise(count = n())
 
     # begin block SNP loops
     for(pos in positions$Position1) {
@@ -254,7 +254,7 @@ parse_SNP <- function(all_data, LD, gff_file) {
     } # END POSITIONS SNPS LOOP
 
     # get all the single SNPs in a data frame by themselves
-    single_SNPs <- chr_linked %>% group_by(Position1) %>% summarise(count = n()) %>% filter(count == 1)
+    single_SNPs <- chr_linked %>% group_by(Position1) %>% dplyr::summarise(count = n()) %>% filter(count == 1)
 
     # get genes here
 
