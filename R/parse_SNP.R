@@ -15,10 +15,14 @@ find_gene <- function(gff, snp_df) {
   
   gene <- gff %>% filter(chr == snp_chr) %>% 
     filter((window_start >= start & window_end <= end) | (start >= window_start & end <= window_end) | 
-             (window_start >= start & window_start <= end) | (window_end >= start & window_end <= end)) %>%
-    mutate(Marker1 = snp_marker)
+             (window_start >= start & window_start <= end) | (window_end >= start & window_end <= end))
   
-  merge(snp_df, gene, by = "Marker1") %>% mutate(chr = NULL, start = NULL, end = NULL)
+  if (nrow(gene) > 0) { 
+    gene <- gene %>% mutate(Marker1 = snp_marker)
+    merge(snp_df, gene, by = "Marker1") #%>% mutate(chr = NULL, start = NULL, end = NULL)
+  } else {
+    mutate(snp_df, name="NA")
+  }
 }
 
 parse_SNP <- function(all_data, LD, gff_file) {
@@ -139,11 +143,13 @@ parse_SNP <- function(all_data, LD, gff_file) {
     single_SNPs <- chr_linked %>% group_by(Position1) %>% dplyr::summarise(count = n()) %>% filter(count == 1)
     single_SNPs <- chr_linked %>% filter(Position1 %in% single_SNPs$Position1)
     
-    positions <- single_SNPs$Position1
+    # we can condense our code a little by using the variable in the loop directly
+    # instead of assigning it
+    # positions <- single_SNPs$Position1
     
-    for(pos in positions){
+    for(pos in single_SNPs$Position1){
       row <- single_SNPs %>% filter(Position1 == pos)
-      single_SNPs[[pos]] <- find_gene(row, gff)
+      single_SNPs[[pos]] <- find_gene(gff, row)
     }
 
     # get genes here
