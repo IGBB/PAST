@@ -137,6 +137,14 @@ parse_SNP <- function(all_data, LD, gff_file) {
 
     # get all the single SNPs in a data frame by themselves
     single_SNPs <- chr_linked %>% group_by(Position1) %>% dplyr::summarise(count = n()) %>% filter(count == 1)
+    single_SNPs <- chr_linked %>% filter(Position1 %in% single_SNPs$Position1)
+    
+    positions <- single_SNPs$Position1
+    
+    for(pos in positions){
+      row <- single_SNPs %>% filter(Position1 == pos)
+      single_SNPs[[pos]] <- find_gene(row, gff)
+    }
 
     # get genes here
 
