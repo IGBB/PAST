@@ -149,7 +149,8 @@ parse_SNP <- function(all_data, LD, gff_file) {
     
     for(pos in single_SNPs$Position1){
       row <- single_SNPs %>% filter(Position1 == pos)
-      single_SNPs[[pos]] <- find_gene(gff, row)
+      gene_info <- find_gene(gff, row) %>% select(Marker1,)
+      left_join(single_SNPs, row, by = "Position1")
     }
 
     # get genes here
