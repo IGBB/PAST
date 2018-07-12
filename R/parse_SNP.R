@@ -1,3 +1,4 @@
+library(plyr)
 library(dplyr)
 read_gff <- function(gff_file) {
   read.table(gff_file, comment.char = "#", col.names = 
@@ -19,16 +20,17 @@ find_gene <- function(gff, snp_df) {
   
   if (nrow(gene) > 0) { 
     gene <- gene %>% mutate(Marker1 = snp_marker)
-    merge(snp_df, gene, by = "Marker1") #%>% mutate(chr = NULL, start = NULL, end = NULL)
+    merge(snp_df, gene, by = "Marker1") %>% mutate(chr = NULL, start = NULL, end = NULL)
   } else {
-    mutate(snp_df, name="NA")
+    mutate(snp_df, name="NA") %>% 
+      select(Marker1, Locus1, Position1, Position2, Site1, Site2, Dist_bp, R.2, SNP1_pval, SNP1_effect, Marker2, SNP2_pval, SNP2_effect, linkedSNP_count, name)
   }
 }
 
 parse_SNP <- function(all_data, LD, gff_file) {
   # This line will eventually be the line below, but for now, we can hardcode the GFF file.
   # gff <- read_gff(gff_file)
-  gff <- read_gff("example/zea_mays.protein_coding.gff.gz")
+  gff <- read_gff("example/example.gff.gz")
 
   # get upstream and downstream
   LD_upstream <- LD[[1]]
@@ -36,6 +38,7 @@ parse_SNP <- function(all_data, LD, gff_file) {
 
   # BEGIN UPSTREAM LOOP
   for (name in names(LD_upstream)) {
+    name = "1"
     temp_data <- LD_upstream[[name]] %>% mutate(Marker1 = paste0("S", Locus1, "_", Position1)) %>%
       mutate(Marker2 = paste0("S", Locus1, "_", Position2))
 
@@ -67,10 +70,10 @@ parse_SNP <- function(all_data, LD, gff_file) {
 
       # process blocks
       for (block_name in names(blocks)) {
-
+        
         # get current block
         block <- blocks[[block_name]]
-
+        print(block)
         # add linkedSNP_count
         block <- block %>% mutate(linkedSNP_count = nrow(block))
 
@@ -95,7 +98,6 @@ parse_SNP <- function(all_data, LD, gff_file) {
 
           # get top row
           block <- block[1,]
-
           # store gene
           blocks[[block_name]] <- find_gene(gff, block)
         } else if (negative > positive) {
@@ -140,17 +142,13 @@ parse_SNP <- function(all_data, LD, gff_file) {
     } # END POSITIONS SNPS LOOP
 
     # get all the single SNPs in a data frame by themselves
+    single_SNP_genes = NULL
     single_SNPs <- chr_linked %>% group_by(Position1) %>% dplyr::summarise(count = n()) %>% filter(count == 1)
     single_SNPs <- chr_linked %>% filter(Position1 %in% single_SNPs$Position1)
-    
-    # we can condense our code a little by using the variable in the loop directly
-    # instead of assigning it
-    # positions <- single_SNPs$Position1
-    
     for(pos in single_SNPs$Position1){
       row <- single_SNPs %>% filter(Position1 == pos)
-      gene_info <- find_gene(gff, row) %>% select(Marker1,)
-      left_join(single_SNPs, row, by = "Position1")
+      gene <- find_gene(gff, row)
+      single_SNP_genes <- rbind(single_SNP_genes, gene)
     }
 
     # get genes here
