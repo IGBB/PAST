@@ -8,6 +8,7 @@
 #   Check Package:             'Ctrl + Shift + E'
 #   Test Package:              'Ctrl + Shift + T'
 
+library(dplyr)
 parse_LD <- function(LD_file) {
   LD_all<-read.table(LD_file, header=TRUE)
   
@@ -21,14 +22,16 @@ parse_LD <- function(LD_file) {
   # already sorted by Site1
   LD_upstream<-LD
   
-  # sort by Site2 for downstream
+  # swap Site2/Position2 and Site1/Position1
+  # for downstream, we treat SNP2 as SNP1
   LD_downstream<-LD
   for (name in names(LD_downstream)) {
-    temp_data<-LD_downstream[[name]]
-    LD_downstream[[name]]<-temp_data[with(temp_data, order(Site2)),]
+    temp_data<-LD_downstream[[name]] %>% 
+      mutate(temp_p2 = Position1, temp_s2 = Site1, Position1 = Position2, Site1 = Site2) %>%
+      mutate(Site2 = temp_s2, Position2 = temp_p2, temp_s2 = NULL, temp_p2 = NULL)
+    LD_downstream[[name]]<-temp_data[with(temp_data, order(Site1)),]
   }
   
   # return list with upstream and downstream
   list(LD_upstream, LD_downstream)
 }
-
