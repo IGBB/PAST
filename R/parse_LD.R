@@ -22,7 +22,8 @@ parse_LD <- function(LD_file) {
   # already sorted by Site1
   LD_upstream<-LD
 
-  # sort by Site2 for downstream
+  # swap Site2/Position2 and Site1/Position1
+  # for downstream, we treat SNP2 as SNP1
   LD_downstream<-LD
   for (name in names(LD_downstream)) {
     temp_data<-LD_downstream[[name]] %>% 
