@@ -38,7 +38,6 @@ parse_SNP <- function(all_data, LD, gff_file) {
 
   # BEGIN UPSTREAM LOOP
   for (name in names(LD_upstream)) {
-    name = "1"
     temp_data <- LD_upstream[[name]] %>% mutate(Marker1 = paste0("S", Locus1, "_", Position1)) %>%
       mutate(Marker2 = paste0("S", Locus1, "_", Position2))
 
@@ -73,19 +72,18 @@ parse_SNP <- function(all_data, LD, gff_file) {
         
         # get current block
         block <- blocks[[block_name]]
-        print(block)
         # add linkedSNP_count
         block <- block %>% mutate(linkedSNP_count = nrow(block))
 
         # look up p-value and effect data for SNP1
         block <- merge(block, all_data, by.x = "Marker1", by.y = "Marker") %>% 
-        mutate(SNP1_pval = p, SNP1_effect = Effect.x) %>% 
-        select(Locus1, Position1, Position2, Site1, Site2, Dist_bp, R.2, Marker1, SNP1_pval, SNP1_effect, Marker2, linkedSNP_count)
+          mutate(SNP1_pval = p, SNP1_effect = Effect.x) %>% 
+          select(Locus1, Position1, Position2, Site1, Site2, Dist_bp, R.2, Marker1, SNP1_pval, SNP1_effect, Marker2, linkedSNP_count)
 
         # look up p-value and effect data for SNP2
         block <- merge(block, all_data, by.x = "Marker2", by.y = "Marker") %>%
-        mutate(SNP2_pval = p, SNP2_effect = Effect.x) %>%
-        select(Locus1, Position1, Position2, Site1, Site2, Dist_bp, R.2, Marker1, SNP1_pval, SNP1_effect, Marker2, SNP2_pval, SNP2_effect, linkedSNP_count)
+          mutate(SNP2_pval = p, SNP2_effect = Effect.x) %>%
+          select(Locus1, Position1, Position2, Site1, Site2, Dist_bp, R.2, Marker1, SNP1_pval, SNP1_effect, Marker2, SNP2_pval, SNP2_effect, linkedSNP_count)
 
         # count the number of negative/positive effects in each block
         negative <- sum(block$SNP2_effect < 0)
@@ -140,18 +138,27 @@ parse_SNP <- function(all_data, LD, gff_file) {
       block_genes <- rbind(block_genes, blocks)
       
     } # END POSITIONS SNPS LOOP
-
+    
+    block_genes <- block_genes %>% filter(name != "N/A")
+    
     # get all the single SNPs in a data frame by themselves
     single_SNP_genes = NULL
     single_SNPs <- chr_linked %>% group_by(Position1) %>% dplyr::summarise(count = n()) %>% filter(count == 1)
-    single_SNPs <- chr_linked %>% filter(Position1 %in% single_SNPs$Position1)
+    single_SNPs <- chr_linked %>% filter(Position1 %in% single_SNPs$Position1) %>% mutate(linkedSNP_count = 1)
+    single_SNPs <- merge(single_SNPs, all_data, by.x = "Marker1", by.y = "Marker") %>% 
+      mutate(SNP1_pval = p, SNP1_effect = Effect.x) %>% 
+      select(Locus1, Position1, Position2, Site1, Site2, Dist_bp, R.2, Marker1, SNP1_pval, SNP1_effect, Marker2, linkedSNP_count)
+    single_SNPs <- merge(single_SNPs, all_data, by.x = "Marker2", by.y = "Marker") %>%
+      mutate(SNP2_pval = p, SNP2_effect = Effect.x) %>%
+      select(Locus1, Position1, Position2, Site1, Site2, Dist_bp, R.2, Marker1, SNP1_pval, SNP1_effect, Marker2, SNP2_pval, SNP2_effect, linkedSNP_count)
+    
     for(pos in single_SNPs$Position1){
       row <- single_SNPs %>% filter(Position1 == pos)
       gene <- find_gene(gff, row)
       single_SNP_genes <- rbind(single_SNP_genes, gene)
     }
-
-    # get genes here
+    
+    single_SNP_genes <- single_SNP_genes %>% filter(name != "N/A")
 
     # catch everything that didn't make it through the filter
     chr_unlinked <- temp_data %>% filter(R.2 >= 0.8) %>% arrange(Position1, Dist_bp)
