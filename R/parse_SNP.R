@@ -8,98 +8,9 @@ read_gff <- function(gff_file) {
     mutate(name = strsplit(as.character(strsplit(as.character(attributes), ";Name=")[[1]][2]), ";")[[1]][1], attributes=NULL)
 }
 
-find_gene <- function(gff, snp_df, window) {
-  if (snp_df$linkedSNP_count == 0) {
-    position = snp_df$Position1
-  }
-  # equal number of positive/negative SNPs in block and single linked SNPs
-  else if (snp_df$linkedSNP_count == -1 | snp_df$linkedSNP_count == 1){
-    # if both effects are negative
-    if (snp_df$SNP1_effect < 0 & snp_df$SNP2_effect < 0) {
-      # if the effects aren't equal
-      if (snp_df$SNP_effect != snp_df$SNP2_effect) {
-        # take the position of the SNP with minimum p-value
-        if (snp_df$SNP1_pval < snp_df$SNP2_pval) {
-          position = snp_df$Position1
-        }
-        else {
-          position = snp_df$Position2
-        }
-      }
-      # if the effects are equal, take SNP2
-      else {
-        position = snp_df$Position2
-      }
-    }
-    
-    # if the SNPs are both positive
-    else if (snp_df$SNP1_effect > 0 & snp_df$SNP2_effect > 0){
-      # if the effects aren't equal
-      if (snp_df$SNP_effect != snp_df$SNP2_effect) {
-        # take the position of the SNP with maximum p-value
-        if (snp_df$SNP1_pval > snp_df$SNP2_pval) {
-          position = snp_df$Position1
-        }
-        else {
-          position = snp_df$Position2
-        }
-      }
-      # if the effects are equal, take SNP2
-      else {
-        position = snp_df$Position2
-      }
-    }
-    else {
-      if (snp_df$linked_SNPcount == -1) {
-        print("ERROR: effects have opposite signs")
-      }
-      else {
-        if (snp_df$SNP1_pval != snp_df$SNP2_pval) {
-          if (snp_df$SNP1_pval < snp_df$SNP2_pval) {
-            position = snp_df$Position1
-          }
-          else {
-            position = snp_df$Position2
-          }
-        }
-        else {
-          print("Single-linked SNP error: same p-value.")
-          position = snp_df$Position2
-        }
-      }
-    }
-  }
-  else {
-    if (snp_df$Dist_bp <= window) {
-      if (snp_df$SNP1_effect == snp_df$SNP2_effect) {
-        position = snp_df$Position2
-      }
-      else if (snp_df$SNP1_effect < 0 & snp_df$SNP2_effect < 0) {
-        if (snp_df$SNP1_pval < snp_df$SNP2_pval) {
-          position = snp_df$Position1
-        }
-        else {
-          position = snp_df$Position2
-        }
-      }
-      else if (snp_df$SNP1_effect > 0 & snp_df$SNP2_effect > 0) {
-        if (snp_df$SNP1_pval > snp_df$SNP2_pval) {
-          position = snp_df$Position1
-        }
-        else {
-          position = snp_df$Position2
-        }
-      }
-      else {
-        position = snp_df$Position2
-      }
-    }
-    else {
-      position = snp_df$Position2
-    }
-  }
-  window_start <- position-window
-  window_end <- position+window
+find_gene <- function(gff, snp_df) {
+  window_start <- snp_df$Position1-1000
+  window_end <- snp_df$Position1+1000
   snp_chr <- snp_df$Locus1
   snp_marker <- snp_df$Marker1
   
@@ -203,7 +114,7 @@ parse_SNP <- function(all_data, LD, gff_file) {
               block <- block %>% arrange(desc(SNP2_effect))
               
               # get top row
-              block <- block[1,] %>% mutate(linkedSNP_count = -1)
+              block <- block[1,]
               
               # store gene
               blocks[[block_name]] <- find_gene(gff, block)
@@ -213,7 +124,7 @@ parse_SNP <- function(all_data, LD, gff_file) {
               block <- block %>% arrange(SNP2_effect)
               
               # get top row
-              block <- block[1,] %>% mutate(linkedSNP_count = -1)
+              block <- block[1,]
               
               # store gene
               blocks[[block_name]] <- find_gene(gff, block)
@@ -258,7 +169,16 @@ parse_SNP <- function(all_data, LD, gff_file) {
       chr_unlinked <- chr_unlinked[match(unique(chr_unlinked$Position1), chr_unlinked$Position1),]
   
       # get genes here
-  
+      unlinked_SNP_genes = NULL
+      unlinked_SNPs <- chr_unlinked %>% group_by(Position1) %>% dplyr::summarise(count = n()) %>% filter(count == 1)
+      unlinked_SNPs <- chr_unlinked %>% filter(Position1 %in% unlinked_SNPs$Position1) %>% mutate(unlinkedSNP_count = 1)
+      unlinked_SNPs <- merge(unlinked_SNPs, all_data, by.x = "Marker1", by.y = "Marker") %>% 
+        mutate(SNP1_pval = p, SNP1_effect = Effect.x) %>% 
+        select(Locus1, Position1, Position2, Site1, Site2, Dist_bp, R.2, Marker1, SNP1_pval, SNP1_effect, Marker2, unlinkedSNP_count)
+      unlinked_SNPs <- merge(unlinked_SNPs, all_data, by.x = "Marker2", by.y = "Marker") %>%
+        mutate(SNP2_pval = p, SNP2_effect = Effect.x) %>%
+        select(Locus1, Position1, Position2, Site1, Site2, Dist_bp, R.2, Marker1, SNP1_pval, SNP1_effect, Marker2, SNP2_pval, SNP2_effect, unlinkedSNP_count)
+      
       ## Last two steps are below this line. All your stuff should be above this.
   
       # combine linked and unlinked and arrange Position1 in ascending order
