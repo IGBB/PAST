@@ -9,92 +9,68 @@ read_gff <- function(gff_file) {
 }
 
 find_gene <- function(gff, snp_df, window) {
+  problem = FALSE
+  snp_df$Dist_bp <- as.numeric(levels(snp_df$Dist_bp))[snp_df$Dist_bp]
   if (snp_df$linkedSNP_count == 0) {
     position = snp_df$Position1
-  }
-  # equal number of positive/negative SNPs in block and single linked SNPs
-  else if (snp_df$linkedSNP_count == -1 | snp_df$linkedSNP_count == 1){
-    # if both effects are negative
-    if (snp_df$SNP1_effect < 0 & snp_df$SNP2_effect < 0) {
-      # if the effects aren't equal
-      if (snp_df$SNP_effect != snp_df$SNP2_effect) {
-        # take the position of the SNP with minimum p-value
-        if (snp_df$SNP1_pval < snp_df$SNP2_pval) {
-          position = snp_df$Position1
-        }
-        else {
-          position = snp_df$Position2
-        }
-      }
-      # if the effects are equal, take SNP2
-      else {
-        position = snp_df$Position2
-      }
-    }
-    
-    # if the SNPs are both positive
-    else if (snp_df$SNP1_effect > 0 & snp_df$SNP2_effect > 0){
-      # if the effects aren't equal
-      if (snp_df$SNP_effect != snp_df$SNP2_effect) {
-        # take the position of the SNP with maximum p-value
-        if (snp_df$SNP1_pval > snp_df$SNP2_pval) {
-          position = snp_df$Position1
-        }
-        else {
-          position = snp_df$Position2
-        }
-      }
-      # if the effects are equal, take SNP2
-      else {
-        position = snp_df$Position2
-      }
-    }
-    else {
-      if (snp_df$linked_SNPcount == -1) {
-        print("ERROR: effects have opposite signs")
-      }
-      else {
-        if (snp_df$SNP1_pval != snp_df$SNP2_pval) {
-          if (snp_df$SNP1_pval < snp_df$SNP2_pval) {
+  } else if (snp_df$linkedSNP_count == -1 | snp_df$linkedSNP_count == 1){
+      if (snp_df$SNP1_effect != snp_df$SNP2_effect) {
+        if (snp_df$SNP1_effect < 0 & snp_df$SNP2_effect < 0) {
+          if (snp_df$SNP1_effect < snp_df$SNP2_effect) {
             position = snp_df$Position1
-          }
-          else {
+          } else {
             position = snp_df$Position2
           }
+        } else if (snp_df$SNP1_effect > 0 & snp_df$SNP2_effect > 0) {
+          if (snp_df$SNP1_effect > snp_df$SNP2_effect) {
+            position = snp_df$Position1
+          } else {
+            position = snp_df$Position2
+          }
+        } else {
+          if (snp_df$linkedSNP_count == -1) {
+            print("ERROR: effects have opposite signs")
+          } else {
+              if (snp_df$SNP1_pval != snp_df$SNP2_pval) {
+                if (snp_df$SNP1_pval < snp_df$SNP2_pval) {
+                  position = snp_df$Position1
+                } else {
+                  position = snp_df$Position2
+                }
+              } else {
+                print("Single-linked SNP error: same p-value")
+                problem = TRUE
+                position = snp_df$Position2
+              }
+          }
         }
-        else {
-          print("Single-linked SNP error: same p-value.")
-          position = snp_df$Position2
-        }
+      } else {
+        position = snp_df$Position2
       }
-    }
-  }
-  else {
+  } else {
     if (snp_df$Dist_bp <= window) {
       if (snp_df$SNP1_effect == snp_df$SNP2_effect) {
         position = snp_df$Position2
-      }
-      else if (snp_df$SNP1_effect < 0 & snp_df$SNP2_effect < 0) {
+      } else if (snp_df$SNP1_effect < 0 & snp_df$SNP2_effect < 0) {
+        if (snp_df$SNP1_effect < snp_df$SNP2_effect) {
+          position = snp_df$Position1
+        } else {
+          position = snp_df$Position2
+        }
+      } else if (snp_df$SNP1_effect > 0 & snp_df$SNP2_effect > 0) {
+        if (snp_df$SNP1_effect > snp_df$SNP2_effect) {
+          position = snp_df$Position1
+        } else {
+          position = snp_df$Position2
+        }
+      } else {
         if (snp_df$SNP1_pval < snp_df$SNP2_pval) {
           position = snp_df$Position1
-        }
-        else {
+        } else {
           position = snp_df$Position2
         }
       }
-      else if (snp_df$SNP1_effect > 0 & snp_df$SNP2_effect > 0) {
-        if (snp_df$SNP1_pval > snp_df$SNP2_pval) {
-          position = snp_df$Position1
-        }
-        else {
-          position = snp_df$Position2
-        }
-      }
-      else {
-        position = snp_df$Position2
-      }
-    }
-    else {
+    } else {
       position = snp_df$Position2
     }
   }
@@ -107,7 +83,7 @@ find_gene <- function(gff, snp_df, window) {
     filter((window_start >= start & window_end <= end) | (start >= window_start & end <= window_end) | 
              (window_start >= start & window_start <= end) | (window_end >= start & window_end <= end))
   
-  if (nrow(gene) > 0) { 
+  if (nrow(gene) > 0 & problem = FALSE) { 
     gene <- gene %>% mutate(Marker1 = snp_marker)
     merge(snp_df, gene, by = "Marker1") %>% mutate(chr = NULL, start = NULL, end = NULL)
   } else {
@@ -116,11 +92,11 @@ find_gene <- function(gff, snp_df, window) {
   }
 }
 
-parse_SNP <- function(all_data, LD, gff_file) {
+parse_SNP <- function(all_data, LD, gff_file, window) {
   # This line will eventually be the line below, but for now, we can hardcode the GFF file.
   # gff <- read_gff(gff_file)
   gff <- read_gff("example/example.gff.gz")
-
+  
   # UP/DOWNSTREAM LOOP
   for (i in 1:length(LD)) {
     LD_stream <- LD[[i]]
@@ -149,7 +125,7 @@ parse_SNP <- function(all_data, LD, gff_file) {
       
       # begin block SNP loops
       for(pos in positions$Position1) {
-  
+        print(pos)
         # select all SNPs at pos
         positions_block_SNPs <- block_SNPs %>% filter(Position1 == pos)
   
@@ -187,7 +163,7 @@ parse_SNP <- function(all_data, LD, gff_file) {
             # get top row
             block <- block[1,]
             # store gene
-            blocks[[block_name]] <- find_gene(gff, block)
+            blocks[[block_name]] <- find_gene(gff, block, window)
           } else if (negative > positive) {
             # sort in ascending order
             block <- block %>% arrange(SNP2_effect)
@@ -196,7 +172,7 @@ parse_SNP <- function(all_data, LD, gff_file) {
             block <- block[1,]
   
             # store gene
-            blocks[[block_name]] <- find_gene(gff, block)
+            blocks[[block_name]] <- find_gene(gff, block, window)
           } else if (negative == positive) {
             if(block$SNP1_effect[[1]] > 0){
               # sort in descending order
@@ -206,7 +182,7 @@ parse_SNP <- function(all_data, LD, gff_file) {
               block <- block[1,] %>% mutate(linkedSNP_count = -1)
               
               # store gene
-              blocks[[block_name]] <- find_gene(gff, block)
+              blocks[[block_name]] <- find_gene(gff, block, window)
             }
             else{
               # sort in ascending order
@@ -216,7 +192,7 @@ parse_SNP <- function(all_data, LD, gff_file) {
               block <- block[1,] %>% mutate(linkedSNP_count = -1)
               
               # store gene
-              blocks[[block_name]] <- find_gene(gff, block)
+              blocks[[block_name]] <- find_gene(gff, block, window)
             }
           }
         } # END BLOCKS LOOP
@@ -244,8 +220,9 @@ parse_SNP <- function(all_data, LD, gff_file) {
       
       # get genes for single linked SNPs and filter NA genes
       for(pos in single_SNPs$Position1){
+        print(pos)
         row <- single_SNPs %>% filter(Position1 == pos)
-        gene <- find_gene(gff, row)
+        gene <- find_gene(gff, row, window)
         single_SNP_genes <- rbind(single_SNP_genes, gene)
       }
       
