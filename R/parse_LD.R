@@ -13,7 +13,7 @@ parse_LD <- function(LD_file) {
   LD_all<-read.table(LD_file, header=TRUE)
   
   # filter out Locus1 == 0 and select certain columns and remove NaN
-  LD_all<-filter(LD_all, Locus1 != 0) %>% select("Locus1", "Position1", "Site1", "Position2", "Site2", "Dist_bp", "R.2")
+  LD_all<-LD_all %>% filter(Locus1 != Locus2, Locus1 != 0) %>% select("Locus1", "Position1", "Site1", "Position2", "Site2", "Dist_bp", "R.2")
   LD_all<-LD_all[complete.cases(LD_all),]
   
   # split by Locus1
