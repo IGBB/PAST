@@ -106,6 +106,9 @@ parse_SNP <- function(all_data, LD, gff_file, window) {
     for (name in names(LD_stream)) {
       temp_data <- LD_stream[[name]] %>% mutate(Marker1 = paste0("S", Locus1, "_", Position1)) %>%
         mutate(Marker2 = paste0("S", Locus1, "_", Position2))
+      
+      # temporary line to subset data for testing
+      temp_data <- head(temp_data, 5000)
   
       # filter based on SNPs in stats/effects
       # temp_data <- temp_data %>% filter(temp_data$Position1 %in% all_data$Pos)
@@ -226,7 +229,7 @@ parse_SNP <- function(all_data, LD, gff_file, window) {
         single_SNP_genes <- rbind(single_SNP_genes, gene)
       }
       
-      # single_SNP_genes <- single_SNP_genes %>% filter(name != "NA")
+      single_SNP_genes <- single_SNP_genes %>% filter(name != "NA")
       
       test <- single_SNP_genes %>% group_by(name) %>% dplyr::summarise(count = n())
   
@@ -269,6 +272,34 @@ parse_SNP <- function(all_data, LD, gff_file, window) {
     LD[[i]] <- LD_stream
     
   }
+  # Gene sorting loop
+  all_genes <- rbind(block_genes, single_SNP_genes, unlinked_SNP_genes)
+  all_genes <- arrange(all_genes, desc(name))
+  group_genes <- split(all_genes, f = all_genes$name)
+  for ( name_block in names(group_genes)){
+    single <- group_genes[[name_block]]
+    negative <- sum(single$SNP2_effect < 0)
+    positive <- sum(single$SNP2_effect > 0)
+    
+    if (positive > negative){
+      single <- single %>% arrange(desc(SNP2_effect))
+      tagSNP <- single[1,]
+  } else if(negative > positive){
+    single <- single %>% arrange(SNP2_effect)
+    tagSNP <- single[1,]
+  } else if(positive == negative){
+    if (single$SNP1_effect[[1]] > 0){
+      single <- single %>% arrange(desc(SNP2_effect))
+      tagSNP <- single[1,]
+    } 
+    else{
+      single <- single %>% arrange(SNP2_effect)
+      tagSNP <- single[1,]
+    }
+      
+  }
+  }
+  
   # return LD
   LD
 }
