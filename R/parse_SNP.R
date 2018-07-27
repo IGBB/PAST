@@ -275,11 +275,14 @@ parse_SNP <- function(all_data, LD, gff_file, window) {
   # Gene sorting loop
   all_genes <- rbind(block_genes, single_SNP_genes, unlinked_SNP_genes)
   all_genes <- arrange(all_genes, desc(name))
+  all_genes <- all_genes %>% mutate(linkedSNP_count <- ifelse(linkedSNP_count <= 0, 1 ,linkedSNP_count))
   group_genes <- split(all_genes, f = all_genes$name)
   for ( name_block in names(group_genes)){
     single <- group_genes[[name_block]]
-    negative <- sum(single$SNP2_effect < 0)
-    positive <- sum(single$SNP2_effect > 0)
+    neg_genes <- single %>% filter(SNP2_effect < 0)
+    pos_genes <- single %>% filter(SNP2_effect > 0)
+    negative <- sum(neg_genes$linkedSNP_count)
+    positive <- sum(pos_genes$linkedSNP_count)
     
     if (positive > negative){
       single <- single %>% arrange(desc(SNP2_effect))
