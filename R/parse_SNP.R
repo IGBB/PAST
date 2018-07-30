@@ -291,14 +291,20 @@ parse_SNP <- function(all_data, LD, gff_file, window) {
     single <- single %>% arrange(SNP2_effect)
     tagSNP <- single[1,]
   } else if(positive == negative){
-    if (single$SNP1_effect[[1]] > 0){
-      single <- single %>% arrange(desc(SNP2_effect))
-      tagSNP <- single[1,]
-    } 
-    else{
-      single <- single %>% arrange(SNP2_effect)
-      tagSNP <- single[1,]
-    }
+   pos_genes <- pos_genes %>% arrange(desc(SNP2_effect))
+   pos_max <- pos_genes[1,]
+   
+   neg_genes <- neg_genes %>% arrange(SNP2_effect)
+   neg_max <- neg_genes[1,]
+   
+   neg_max$SNP2_effect <- abs(neg_max$SNP2_effect)
+   
+   if(pos_max$SNP2_effect > neg_max$SNP2_effect){
+     tagSNP <- pos_max
+   }
+   else{
+     tagSNP <- neg_max
+   }
       
   }
   }
