@@ -265,16 +265,16 @@ parse_SNP <- function(all_data, LD, gff_file, window) {
       group_genes <- split(all_genes, f = all_genes$name)
       for ( name_block in names(group_genes)){
         single <- group_genes[[name_block]]
-        neg_genes <- single %>% filter(SNP2_effect < 0) %>% arrange(SNP2_effect)
-        pos_genes <- single %>% filter(SNP2_effect > 0) %>% arrange(desc(SNP2_effect))
+        neg_genes <- single %>% filter(SNP2_effect < 0) %>% arrange(SNP2_effect, SNP2_pval)
+        pos_genes <- single %>% filter(SNP2_effect > 0) %>% arrange(desc(SNP2_effect, SNP2_pval))
         negative <- sum(neg_genes$linkedSNP_count)
         positive <- sum(pos_genes$linkedSNP_count)
         
         if (positive > negative){
-          single <- single %>% arrange(desc(SNP2_effect))
+          single <- single %>% arrange(desc(SNP2_effect, SNP2_pval))
           tagSNP <- single[1,]
         } else if(negative > positive){
-          single <- single %>% arrange(SNP2_effect)
+          single <- single %>% arrange(SNP2_effect, SNP2_pval)
           tagSNP <- single[1,]
         } else if(positive == negative){
           pos_max <- pos_genes[1,]
@@ -290,9 +290,11 @@ parse_SNP <- function(all_data, LD, gff_file, window) {
         }
         
         # code to overwrite group_genes[[name_block]] with tagSNP
+        group_genes[[name_block]] <- tagSNP
       }
       
       # code to rejoin group_genes into a single dataframe
+      group_genes <- rbind.fill(group_genes)
   
       # store modified and filtered data
       LD_stream[[name]] <- group_genes
