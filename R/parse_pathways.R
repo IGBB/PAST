@@ -1,6 +1,6 @@
 parse_pathways <- function(tagSNPs, pathways_file) {
   
-  # debugging code
+  # debugging code to be removed
   pathways_file = "example/pathways.txt"
   
   # load pathways
@@ -9,8 +9,7 @@ parse_pathways <- function(tagSNPs, pathways_file) {
   # UP/DOWNSTREAM LOOP
   for (i in 1:length(tagSNPs)) {
     tagSNPs_stream <- tagSNPs[[i]]
-    names(LD_stream)
-    
+
     # BEGIN PROCESSING BY CHROMOSOMES LOOP
     for (name in names(tagSNPs_stream)) {
       temp_tagSNPs <-tagSNPs_stream[[name]] 
@@ -23,11 +22,17 @@ parse_pathways <- function(tagSNPs, pathways_file) {
       # important functions: group_by, summary, filter
       # reference: parse_SNP.R, line 118-120
       
+      # store pathway information for chromosomes
+      tagSNPs_stream[[name]] <- temp_tagSNPs
+      
     } # END CHROMOSOMES LOOP
+    
+    # store pathway information for up/dowstream
+    tagSNPs[[i]] <- tagSNPs_stream
     
   } # END UP/DOWNSTREAM LOOP
   
-  
-  
-  
+# return updated tagSNPs with pathway information
+tagSNPs
+
 }
