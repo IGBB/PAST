@@ -99,8 +99,7 @@ parse_SNP <- function(all_data, LD, gff_file, window, r_squared_cutoff) {
   # UP/DOWNSTREAM LOOP
   for (i in 1:length(LD)) {
     LD_stream <- LD[[i]]
-    names(LD_stream)
-  
+
     # BEGIN PROCESSING BY CHROMOSOMES LOOP
     for (name in names(LD_stream)) {
       temp_data <- LD_stream[[name]] %>% mutate(Marker1 = paste0("S", Locus1, "_", Position1)) %>%
