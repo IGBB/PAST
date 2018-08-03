@@ -1,14 +1,3 @@
-# Setup and validate
-#
-# This function sets up and validates the data
-
-# Some useful keyboard shortcuts for package authoring:
-#
-#   Build and Reload Package:  'Ctrl + Shift + B'
-#   Check Package:             'Ctrl + Shift + E'
-#   Test Package:              'Ctrl + Shift + T'
-
-library(dplyr)
 parse_LD <- function(LD_file) {
   LD_all<-read.table(LD_file, header=TRUE)
   

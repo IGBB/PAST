@@ -1,13 +1,3 @@
-# Setup and validate
-#
-# This function sets up and validates the data
-
-# Some useful keyboard shortcuts for package authoring:
-#
-#   Build and Reload Package:  'Ctrl + Shift + B'
-#   Check Package:             'Ctrl + Shift + E'
-#   Test Package:              'Ctrl + Shift + T'
-
 merge_data <- function(stats_file, effects_file) {
 
   stats = read.table(stats_file, header = TRUE, sep = "\t")

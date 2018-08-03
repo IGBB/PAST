@@ -92,10 +92,9 @@ find_gene <- function(gff, snp_df, window) {
   }
 }
 
-parse_SNP <- function(all_data, LD, gff_file, window) {
+parse_SNP <- function(all_data, LD, gff_file, window, r_squared_cutoff) {
   # This line will eventually be the line below, but for now, we can hardcode the GFF file.
-  # gff <- read_gff(gff_file)
-  gff <- read_gff("example/example.gff.gz")
+  gff <- read_gff(gff_file)
   
   # UP/DOWNSTREAM LOOP
   for (i in 1:length(LD)) {
@@ -106,15 +105,12 @@ parse_SNP <- function(all_data, LD, gff_file, window) {
     for (name in names(LD_stream)) {
       temp_data <- LD_stream[[name]] %>% mutate(Marker1 = paste0("S", Locus1, "_", Position1)) %>%
         mutate(Marker2 = paste0("S", Locus1, "_", Position2))
-      
-      # temporary line to subset data for testing
-      temp_data <- head(temp_data, 5000)
-  
+
       # filter based on SNPs in stats/effects
       # temp_data <- temp_data %>% filter(temp_data$Position1 %in% all_data$Pos)
   
       # retrieve linked SNPs
-      chr_linked <- temp_data %>% arrange(Position1) %>% filter(R.2 >= 0.8)
+      chr_linked <- temp_data %>% arrange(Position1) %>% filter(R.2 >= r_squared_cutoff)
   
       # get SNPs that need to be parsed by block
       block_SNPs <- chr_linked %>% group_by(Marker1) %>% dplyr::summarise(count = n()) %>% filter(count > 1)
@@ -201,8 +197,6 @@ parse_SNP <- function(all_data, LD, gff_file, window) {
         } # END BLOCKS LOOP
         
         # rejoin blocks and overwrite block_SNPs
-        # you'll need to run the whole for block in blocks loop
-        # to get blocks set up correctly
         blocks <- rbind.fill(blocks)
         block_genes <- rbind(block_genes, blocks)
         
@@ -289,11 +283,11 @@ parse_SNP <- function(all_data, LD, gff_file, window) {
           }
         }
         
-        # code to overwrite group_genes[[name_block]] with tagSNP
+        # overwrite group_genes[[name_block]] with tagSNP
         group_genes[[name_block]] <- tagSNP
       }
       
-      # code to rejoin group_genes into a single dataframe
+      # rejoin group_genes into a single dataframe
       group_genes <- rbind.fill(group_genes)
   
       # store modified and filtered data
