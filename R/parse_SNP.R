@@ -108,6 +108,9 @@ parse_SNP <- function(all_data, LD, gff_file, window, r_squared_cutoff) {
 
       # filter based on SNPs in stats/effects
       # temp_data <- temp_data %>% filter(temp_data$Position1 %in% all_data$Pos)
+      
+      # temporary line to subset data for testing
+      temp_data <- head(temp_data, 5000)
   
       # retrieve linked SNPs
       chr_linked <- temp_data %>% arrange(Position1) %>% filter(R.2 >= r_squared_cutoff)
