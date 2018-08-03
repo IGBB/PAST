@@ -1,30 +1,20 @@
-# Setup and validate
-#
-# This function sets up and validates the data
-
-# Some useful keyboard shortcuts for package authoring:
-#
-#   Build and Reload Package:  'Ctrl + Shift + B'
-#   Check Package:             'Ctrl + Shift + E'
-#   Test Package:              'Ctrl + Shift + T'
-
 merge_data <- function(stats_file, effects_file) {
-  stats = read.table(stats_file, header=TRUE)
-  effects = read.table(effects_file, header=TRUE)
+
+  stats = read.table(stats_file, header = TRUE, sep = "\t")
+  effects = read.table(effects_file, header = TRUE, sep = "\t")
 
   # Delete all markers in effects and stats with more or less alleles than 2
-  non_biallelic <- effects %>% group_by(Marker) %>% summarise(count=n()) %>% filter(count != 2)
-  effects <- effects[!(effects$Marker %in% non_biallelic$Marker),]
-  stats <- stats[!(stats$Marker %in% non_biallelic$Marker),]
+  non_biallelic <- effects %>% group_by(Marker) %>% dplyr::summarise(count=n()) %>% filter(count != 2)
+  effects <- effects %>% filter(!(effects$Marker %in% non_biallelic$Marker), Locus != 0)
+  stats <- stats %>% filter(!(stats$Marker %in% non_biallelic$Marker))
 
   # Remove all NaN data to prevent math with NaN
-  stats <- stats[!(stats$marker_F == "NaN"), ]
+  stats <- stats %>% filter(MarkerR2 != "NaN", Chr != 0)
 
   # Split effects into even and odd rows and recombine into a single row without duplicate columns
   odd_effects<-effects[seq(1, nrow(effects), by = 2),]
   even_effects<-effects[seq(2, nrow(effects), by = 2),]
-  effects <- left_join(odd_effects, even_effects, by = "Marker", "Trait")
-  effects <- subset(effects, select = -c(Trait.y, Chr.y, Pos.y))
+  effects <- merge(odd_effects, even_effects, by = "Marker") %>% mutate(Trait = Trait.x, Trait.x = NULL, Trait.y = NULL)
 
   # Delete temporary dataframes
   rm(non_biallelic)
@@ -32,8 +22,9 @@ merge_data <- function(stats_file, effects_file) {
   rm(odd_effects)
 
   # Merge stats and effects and return
-  all_data <- left_join(stats, effects, by = "Marker")
-  subset(all_data, select = -c(Trait.x, Chr.x, Pos.x, dom_F, dom_p, add_F, add_p, marker_MS, error_MS, model_df, model_MS))
+  all_data <- merge(stats, effects, by = "Marker") %>% 
+    mutate(Trait = Trait.x, Trait.x = NULL, Trait.y = NULL) %>% 
+    select(-add_effect, -add_F, -add_p, -dom_F, -dom_p, -errordf)
 }
 
 
