@@ -1,5 +1,4 @@
 parse_LD <- function(LD_file) {
-  LD_file = "example/KernelColorLD.1.txt.gz"
   LD_all<-read.table(LD_file, header=TRUE) %>% mutate(Dist_bp = ifelse(Dist_bp == "N/A", NA, Dist_bp))
   
   # filter out Locus1 == 0 and select certain columns and remove NaN
