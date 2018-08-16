@@ -5,3 +5,5 @@ inst/doc
 past.Rproj
 .RDataTmp
 .Rbuildignore
+example/KernelColorLD.txt.gz
+example/KernelColorLD.1.txt.gz
