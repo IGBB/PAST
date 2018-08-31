@@ -1,8 +1,5 @@
 parse_pathways <- function(tagSNPs, pathways_file, gene_number_cutoff) {
-  
-  # debugging code to be removed
-  # pathways_file = "example/pathways.txt"
-  
+
   # load pathways
   pathways <- read.table(pathways_file, sep = "\t", header = TRUE, quote="")
   
