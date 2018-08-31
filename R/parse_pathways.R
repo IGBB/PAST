@@ -1,7 +1,7 @@
-parse_pathways <- function(tagSNPs, pathways_file) {
+parse_pathways <- function(tagSNPs, pathways_file, gene_number_cutoff) {
   
   # debugging code to be removed
-  pathways_file = "example/pathways.txt"
+  # pathways_file = "example/pathways.txt"
   
   # load pathways
   pathways <- read.table(pathways_file, sep = "\t", header = TRUE, quote="")
@@ -11,20 +11,16 @@ parse_pathways <- function(tagSNPs, pathways_file) {
     tagSNPs_stream <- tagSNPs[[i]]
 
     # BEGIN PROCESSING BY CHROMOSOMES LOOP
-    for (named in names(tagSNPs_stream)) {
-      temp_tagSNPs <-tagSNPs_stream[[named]] 
+    for (name in names(tagSNPs_stream)) {
+      temp_tagSNPs <-tagSNPs_stream[[name]] 
       
       # merge pathways and temp_tagSNPs by gene
-      # important functions: merge
-      # reference: parse_SNP.R, line 147
+      temp_tagSNPs <- merge(pathways, temp_tagSNPs, by.x = "gene_id", by.y = "name")
       
-      merged_path <- merge(pathways, temp_tagSNPs, by.x = "gene_id", by.y = "name")
       # filter out pathways with less than five genes associated with them
-      # important functions: group_by, summary, filter
-      # reference: parse_SNP.R, line 118-120
+      pathways_filtered <- temp_tagSNPs %>% group_by(pathway_id) %>% dplyr::summarise(count = n()) %>% filter(count >= gene_number_cutoff)
+      temp_tagSNPs <- temp_tagSNPs %>% filter(pathway_id %in% pathways_filtered$pathway_id)
       
-      best_paths <- merged_path %>% group_by(pathway_id) %>% dplyr::summarise(count = n()) %>% filter(count >= 5)
-      best_paths <- merged_path %>% filter(pathway_id %in% best_paths$pathway_id)
       # store pathway information for chromosomes
       tagSNPs_stream[[name]] <- temp_tagSNPs
       
@@ -37,5 +33,4 @@ parse_pathways <- function(tagSNPs, pathways_file) {
   
 # return updated tagSNPs with pathway information
 tagSNPs
-
 }
