@@ -29,4 +29,5 @@ library(past)
 all_data <- merge_data("../example/GrainColorGLMStatsHiMAF.txt", "../example/GrainColorGLMAllEffHiMAF.txt")
 LD <- parse_LD("../example/KernelColorLD.1.txt.gz") # parse_LD can take gzip-compressed files or plain text
 tagSNPs <-parse_SNP(all_data, LD, "../example/example.gff.gz", 1000, 0.8)
+filtered_pathways <- parse_pathways(tagSNPs, "../example/pathways.txt", 5)
 ```

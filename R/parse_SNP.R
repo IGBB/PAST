@@ -10,7 +10,7 @@ read_gff <- function(gff_file) {
 
 find_gene <- function(gff, snp_df, window) {
   problem = FALSE
-  snp_df$Dist_bp <- as.numeric(levels(snp_df$Dist_bp))[snp_df$Dist_bp]
+ 
   if (snp_df$linkedSNP_count == 0) {
     position = snp_df$Position1
   } else if (snp_df$linkedSNP_count == -1 | snp_df$linkedSNP_count == 1){
@@ -99,8 +99,7 @@ parse_SNP <- function(all_data, LD, gff_file, window, r_squared_cutoff) {
   # UP/DOWNSTREAM LOOP
   for (i in 1:length(LD)) {
     LD_stream <- LD[[i]]
-    names(LD_stream)
-  
+
     # BEGIN PROCESSING BY CHROMOSOMES LOOP
     for (name in names(LD_stream)) {
       temp_data <- LD_stream[[name]] %>% mutate(Marker1 = paste0("S", Locus1, "_", Position1)) %>%
@@ -108,7 +107,7 @@ parse_SNP <- function(all_data, LD, gff_file, window, r_squared_cutoff) {
 
       # filter based on SNPs in stats/effects
       # temp_data <- temp_data %>% filter(temp_data$Position1 %in% all_data$Pos)
-  
+      
       # retrieve linked SNPs
       chr_linked <- temp_data %>% arrange(Position1) %>% filter(R.2 >= r_squared_cutoff)
   
