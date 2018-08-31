@@ -10,6 +10,7 @@ read_gff <- function(gff_file) {
 
 find_gene <- function(gff, snp_df, window) {
   problem = FALSE
+ 
   if (snp_df$linkedSNP_count == 0) {
     position = snp_df$Position1
   } else if (snp_df$linkedSNP_count == -1 | snp_df$linkedSNP_count == 1){

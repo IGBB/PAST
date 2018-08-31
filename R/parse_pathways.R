@@ -11,17 +11,20 @@ parse_pathways <- function(tagSNPs, pathways_file) {
     tagSNPs_stream <- tagSNPs[[i]]
 
     # BEGIN PROCESSING BY CHROMOSOMES LOOP
-    for (name in names(tagSNPs_stream)) {
-      temp_tagSNPs <-tagSNPs_stream[[name]] 
+    for (named in names(tagSNPs_stream)) {
+      temp_tagSNPs <-tagSNPs_stream[[named]] 
       
       # merge pathways and temp_tagSNPs by gene
       # important functions: merge
       # reference: parse_SNP.R, line 147
       
+      merged_path <- merge(pathways, temp_tagSNPs, by.x = "gene_id", by.y = "name")
       # filter out pathways with less than five genes associated with them
       # important functions: group_by, summary, filter
       # reference: parse_SNP.R, line 118-120
       
+      best_paths <- merged_path %>% group_by(pathway_id) %>% dplyr::summarise(count = n()) %>% filter(count >= 5)
+      best_paths <- merged_path %>% filter(pathway_id %in% best_paths$pathway_id)
       # store pathway information for chromosomes
       tagSNPs_stream[[name]] <- temp_tagSNPs
       
