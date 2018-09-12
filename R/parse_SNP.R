@@ -157,7 +157,7 @@ parse_SNP <- function(all_data, LD, gff_file, window, r_squared_cutoff, num_core
         mutate(Marker2 = paste0("S", Locus1, "_", Position2))
       
       chr_data <- all_data %>% filter(Chr == as.integer(name))
-    
+  
       # retrieve linked SNPs
       chr_linked <- temp_data %>% arrange(Position1) %>% filter(R.2 >= r_squared_cutoff)
       
