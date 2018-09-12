@@ -12,8 +12,9 @@ read_gff <- function(gff_file) {
 
 find_genes <- function(gff, snp_df, window) {
   
-  no_linked = snp_df %>% filter(linkedSNP_count == 0) %>% mutate(Position = Position1) %>% 
-    select(-c(Position1, Position2, Site1, Site2, Dist_bp))
+  print("Splitting...")
+  
+  no_linked = snp_df %>% filter(linkedSNP_count == 0) %>% mutate(Position = Position1)
   one_linked = snp_df %>% filter(linkedSNP_count == 1) %>% mutate(Position = ifelse(SNP1_effect != SNP2_effect,
                                                                                     ifelse(SNP1_effect < 0 & SNP2_effect < 0,
                                                                                            ifelse(SNP1_effect < SNP2_effect,
@@ -30,8 +31,7 @@ find_genes <- function(gff, snp_df, window) {
                                                                                                                        Position2),
                                                                                                                 "problem"),
                                                                                                          Position2))),
-                                                                                    Position2)) %>% 
-    select(-c(Position1, Position2, Site1, Site2, Dist_bp))
+                                                                                    Position2))
   more_linked = snp_df %>% filter(linkedSNP_count > 1) %>% mutate(Position = ifelse(Dist_bp <= window,
                                                                                     ifelse(SNP1_effect == SNP2_effect,
                                                                                            Position2,
@@ -48,8 +48,7 @@ find_genes <- function(gff, snp_df, window) {
                                                                                                                        Position1,
                                                                                                                        Position2),
                                                                                                                 "problem")))),
-                                                                                    Position2)) %>%
-    select(-c(Position1, Position2, Site1, Site2, Dist_bp))
+                                                                                    Position2))
   problem_linked = snp_df %>% filter(linkedSNP_count == -1) %>% mutate(Position = ifelse(SNP1_effect != SNP2_effect,
                                                                                          ifelse(SNP1_effect < 0 & SNP2_effect < 0,
                                                                                                 ifelse(SNP1_effect < SNP2_effect,
@@ -62,16 +61,20 @@ find_genes <- function(gff, snp_df, window) {
                                                                                                        ifelse(SNP1_effect * SNP2_effect < 0,
                                                                                                               "problem",
                                                                                                               "problem"))),
-                                                                                         Position2)) %>% 
-    select(-c(Position1, Position2, Site1, Site2, Dist_bp))
-  
+                                                                                         Position2))
+  print("Joining split data...")
   snp_df = rbind(no_linked, one_linked, problem_linked, more_linked) %>% 
     filter(Position != "problem") %>% mutate(Position = as.integer(Position)) %>% 
-    mutate(window_start = Position-1000, window_end = Position + 1000) %>% mutate(chr = Locus1)
-  inner_join(snp_df, gff, by="chr") %>% filter((window_start >= start & window_end <= end) | (start >= window_start & end <= window_end) | 
+    mutate(window_start = Position-1000, window_end = Position + 1000) %>% mutate(chr = Locus1) %>%
+    mutate(Effect = ifelse(Position == Position1, SNP1_effect, SNP2_effect), P_value = ifelse(Position == Position1, SNP1_pval, SNP2_pval)) %>%
+    select(chr, Position, window_start, window_end, Effect, P_value, linkedSNP_count)
+  print("Joining with gene data...")
+  joined <- inner_join(snp_df, gff, by="chr") %>% filter((window_start >= start & window_end <= end) | (start >= window_start & end <= window_end) | 
                                                  (window_start >= start & window_start <= end) | (window_end >= start & window_end <= end)) %>% 
+    mutate(Position = as.integer(Position), Effect = as.numeric(Effect), Locus1 = chr) %>%
     select(-c(chr, start, end, window_start, window_end))
 }
+
 
 parse_block <- function(block) {
   block <- block %>% mutate(linkedSNP_count = nrow(block))
@@ -114,23 +117,23 @@ parse_block <- function(block) {
 }
 
 tag_SNPs <- function(untagged_genes) {
-  neg_genes <- untagged_genes %>% filter(SNP2_effect < 0) %>% arrange(SNP2_effect, SNP2_pval)
-  pos_genes <- untagged_genes %>% filter(SNP2_effect > 0) %>% arrange(desc(SNP2_effect, SNP2_pval))
+  neg_genes <- untagged_genes %>% filter(Effect < 0) %>% arrange(Effect, P_value)
+  pos_genes <- untagged_genes %>% filter(Effect > 0) %>% arrange(Effect, P_value)
   negative <- sum(neg_genes$linkedSNP_count)
   positive <- sum(pos_genes$linkedSNP_count)
   
   if (positive > negative){
-    untagged_genes <- untagged_genes %>% arrange(desc(SNP2_effect, SNP2_pval))
+    untagged_genes <- untagged_genes %>% arrange(desc(Effect, P_value))
     tagSNP <- untagged_genes[1,]
   } else if(negative > positive){
-    untagged_genes <- untagged_genes %>% arrange(SNP2_effect, SNP2_pval)
+    untagged_genes <- untagged_genes %>% arrange(Effect, P_value)
     tagSNP <- untagged_genes[1,]
   } else if(positive == negative){
     pos_max <- pos_genes[1,]
     neg_max <- neg_genes[1,]
-    neg_max$SNP2_effect <- abs(neg_max$SNP2_effect)
+    neg_max$Effect <- abs(neg_max$Effect)
     
-    if(pos_max$SNP2_effect > neg_max$SNP2_effect){
+    if(pos_max$Effect > neg_max$Effect){
       tagSNP <- pos_max
     }
     else{
@@ -260,5 +263,5 @@ parse_SNP <- function(all_data, LD, gff_file, window, r_squared_cutoff, num_core
   }
   
   # return list of genes
-  genes
+  genes %>% mutate(Chromosome = Locus1, Gene = name) %>% select(Chromosome, Position, Gene, Effect, P_value)
 }
