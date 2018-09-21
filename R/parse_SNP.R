@@ -12,8 +12,6 @@ read_gff <- function(gff_file) {
 
 find_genes <- function(gff, snp_df, window) {
   
-  print("Splitting...")
-  
   no_linked = snp_df %>% filter(linkedSNP_count == 0) %>% mutate(Position = Position1)
   one_linked = snp_df %>% filter(linkedSNP_count == 1) %>% mutate(Position = ifelse(SNP1_effect != SNP2_effect,
                                                                                     ifelse(SNP1_effect < 0 & SNP2_effect < 0,
@@ -62,13 +60,11 @@ find_genes <- function(gff, snp_df, window) {
                                                                                                               "problem",
                                                                                                               "problem"))),
                                                                                          Position2))
-  print("Joining split data...")
   snp_df = rbind(no_linked, one_linked, problem_linked, more_linked) %>% 
     filter(Position != "problem") %>% mutate(Position = as.integer(Position)) %>% 
     mutate(window_start = Position-1000, window_end = Position + 1000) %>% mutate(chr = Locus1) %>%
     mutate(Effect = ifelse(Position == Position1, SNP1_effect, SNP2_effect), P_value = ifelse(Position == Position1, SNP1_pval, SNP2_pval)) %>%
     select(chr, Position, window_start, window_end, Effect, P_value, linkedSNP_count)
-  print("Joining with gene data...")
   joined <- inner_join(snp_df, gff, by="chr") %>% filter((window_start >= start & window_end <= end) | (start >= window_start & end <= window_end) | 
                                                  (window_start >= start & window_start <= end) | (window_end >= start & window_end <= end)) %>% 
     mutate(Position = as.integer(Position), Effect = as.numeric(Effect), Locus1 = chr) %>%
