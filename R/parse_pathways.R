@@ -15,6 +15,7 @@ find_significant_pathways <- function(genes, pathways_file, gene_number_cutoff) 
   # sample to create 1000 random distributions
   effects <- genes %>% select(Gene, Effect)
   effects <- cbind(effects, sapply(1:1000, function(i) sample(effects$Effect)))
+  effects$Gene <- as.character(effects$Gene)
   
   pathways_unique <- unique(select(pathways, pathway_id))
   pathways_unique[] <- lapply(pathways_unique, as.character)
@@ -37,7 +38,7 @@ find_significant_pathways <- function(genes, pathways_file, gene_number_cutoff) 
       # dataset. You can just merge the two
       # datasets. This probably doesn't need a
       # whole function in R.
-      genes_in_pathway <- <YOUR CODE HERE>
+      genes_in_pathway <- merge(genes_in_pathway, temp_data, by.x = "gene_id", by.y = "Gene")
       
       ## getSeffects(genes_in_pathway, temp_data)
       # this part of the code gets the effects of
@@ -48,11 +49,11 @@ find_significant_pathways <- function(genes, pathways_file, gene_number_cutoff) 
       genes_in_pathway <- <YOUR CODE HERE>
       
       ## check cutoff
-      if <YOUR CODE HERE> {
+      if (nrow(genes_in_pathway) > gene_number_cutoff) {
         
         # you need to write a get_factors function that takes
         # the rank column as input
-        factors <- get_factors(genes_in_pathway$rank)
+        factors <- get_factors(genes_in_pathway$rank) 
         
         # you need a get_Pmisses function
         Pmisses <- get_Pmisses(temp_data, genes_in_pathway, factors)
@@ -78,6 +79,13 @@ find_significant_pathways <- function(genes, pathways_file, gene_number_cutoff) 
     
   }
   
+  #Get Factors
+  get_factors <- function(genes_in_pathway$Rank) {
+    genes_in_pathway = arrange(genes_in_pathway, Rank)
+    for (i in nrow(genes_in_pathway)) {
+      factors = genes_in_pathway$Rank[i,] - genes_in_pathway$Rank[i-1,] - 1
+    }
+  }
   
   
   # 11.R code goes here
