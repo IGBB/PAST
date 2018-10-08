@@ -22,13 +22,16 @@ find_significant_pathways <- function(genes, pathways_file, gene_number_cutoff) 
   pathways_unique[] <- lapply(pathways_unique, as.character)
   
   # process sample columns
-  for (i in 2:1003) {
+  for (i in 2:1002) {
     print(i)
     temp_data <- as.data.frame(cbind(effects[,1], effects[,i]))
     colnames(temp_data) <- c("Gene", "Effect")
     temp_data <- temp_data %>% arrange(Effect) %>% mutate(rank = row_number())
     
-    foreach(pathway = iter(pathways_unique, by='row')) %do% {
+    column_observations = data.frame()
+    
+    foreach(pathway = iter(pathways_unique$pathway_id, by='row')) %do% {
+      print(pathway)
       genes_in_pathway <- filter(pathways, pathway_id == pathway)
       
       ## get ranks and effects and sort by rank
@@ -55,10 +58,15 @@ find_significant_pathways <- function(genes, pathways_file, gene_number_cutoff) 
         # you can just sort descending (I think) and take the
         # top row
         #max <- most negative Phits_Pmisses
-          
-        # I'll work on the output later
+        
+        column_observations <- rbind(column_observations, max)
+      } else {
+        column_observations <- rbind(column_observations, NA)
       }
     }
+    pathways_unique <- cbind(pathways_unique, column_observations)
   }
+  colnames(pathways_unique) <- c("Pathway", "ES_Observed", 1:1000)
+  
   # 11.R code goes here
 }
