@@ -8,6 +8,36 @@ get_factors <- function(gene_ranks) {
   factors
 }
 
+get_Pmisses <- function(temp_data, genes_in_pathway, factors) {
+  Pmisses = factors/(nrow(temp_data) - nrow(genes_in_pathway))
+  Pmisses
+}
+
+get_Phits <- function(gene_effects) {
+  NR = sum(abs(as.numeric(level(gene_effects)[gene_effects])))
+  
+  absolute = abs(as.numeric(levels(gene_effects)[gene_effects]))
+  
+  Phits = vector("logical", length(gene_effects))
+  
+  Phits[1] = (absolute[1] / NR)
+  for (i in 2: nrow(gene_effects)) {
+    Phits[i] = absolute[i]/NR + Phits[i-1]
+  }
+  Phits
+}
+
+get_Phits_Pmisses <- function(Phits, Pmisses) {
+  Phits_Pmisses = Phits - Pmisses
+  Phits_Pmisses
+}
+
+find_max <- function(Phits_Pmisses, Phits){
+ Phits_Pmisses = sort(Phits_Pmisses, decreasing = FALSE)
+ max = Phits_Pmisses[1]
+ max
+}
+
 find_significant_pathways <- function(genes, pathways_file, gene_number_cutoff, mode) {
   
   # load pathways
@@ -49,21 +79,24 @@ find_significant_pathways <- function(genes, pathways_file, gene_number_cutoff, 
         factors <- get_factors(genes_in_pathway$rank) 
         
         # you need a get_Pmisses function
-        #Pmisses <- get_Pmisses(temp_data, genes_in_pathway, factors)
+        Pmisses <- get_Pmisses(temp_data, genes_in_pathway, factors)
         
         # since the NR is just a summation, do that at the
         # beginning of this function. R can sum a column easily.
         # you need to create this function
-        #Phits <- get_Phits(genes_in_pathway$effect)
+        #Phits <- get_Phits(genes_in_pathway$Effect)
+        Phits <- get_Phits(gene_effects)
         
         # create this function too
         # this function needs to return a dataframe with
         #Phits_Pmisses <- get_Phits_Pmisses(Phits, Pmisses)
+        Phits_Pmisses <- get_Phits_Pmisses(Phits, Pmisses)
         
         # I don't think you need a function for max
         # you can just sort descending (I think) and take the
         # top row
         #max <- most negative Phits_Pmisses
+        max <- find_max(Phits_Pmisses, Phits)
         
         column_observations <- rbind(column_observations, sort(factors, decreasing = TRUE)[1])
       } else {
@@ -120,16 +153,17 @@ find_significant_pathways <- function(genes, pathways_file, gene_number_cutoff, 
     genes_in_pathway$factors <- get_factors(genes_in_pathway$rank) 
     
     # you need a get_Pmisses function
-    #genes_in_pathway$Pmisses <- get_Pmisses(temp_data, genes_in_pathway, factors)
+    
+    genes_in_pathway$Pmisses <- get_Pmisses(temp_data, genes_in_pathway, factors)
     
     # since the NR is just a summation, do that at the
     # beginning of this function. R can sum a column easily.
     # you need to create this function
-    #genes_in_pathway$Phits <- get_Phits(genes_in_pathway$effect)
+    genes_in_pathway$Phits <- get_Phits(gene_effects)
     
     # create this function too
     # this function needs to return a dataframe with
-    #genes_in_pathway$phit_pmiss <- get_Phits_Pmisses(Phits, Pmisses)
+    genes_in_pathway$phit_pmiss <- get_Phits_Pmisses(Phits, Pmisses)
     
     # append rows with NESrank
     genes_in_pathway<- merge(genes_in_pathway, pathways_significant, by.x="pathway_id", by.y="Pathway")
