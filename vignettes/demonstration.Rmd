@@ -22,14 +22,18 @@ The following block of code calls the `merge()` function of PAST with example da
 
 ```{r}
 # past should load plyr/dplyr
-
+source("http://bioconductor.org/biocLite.R")
+biocLite("qvalue")
+library(qvalue)
 library(dplyr)
 library(past)
 library(parallel)
 library(foreach)
 library(doParallel)
+library(ggplot2)
 all_data <- merge_data("../example/GrainColorGLMStatsHiMAF.txt", "../example/GrainColorGLMAllEffHiMAF.txt")
 LD <- parse_LD("../example/KernelColorLD.1.txt.gz") # parse_LD can take gzip-compressed files or plain text
 genes <-parse_SNP(all_data, LD, "../example/example.gff.gz", 1000, 0.8, 4)
-filtered_pathways <- parse_pathways(genes, "../example/pathways.txt", 5)
+rugplots_data_resistant <- find_significant_pathways(genes, "../example/pathways.txt", 5, "resistant", 1000, 4)
+rugplots_data_susceptible <- find_significant_pathways(genes, "../example/pathways.txt", 5, "susceptible", 1000, 4)
 ```
