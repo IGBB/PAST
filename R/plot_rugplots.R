@@ -7,9 +7,9 @@ plot_pathways <- function(rugplots_data, output_directory) {
     temp_data <- rugplots_split[[rank]]
     title = paste0(unique(as.character(temp_data$pathway_id)), " - ", unique(as.character(temp_data$pathway_name)))
     NES_Observed = unique(as.character(temp_data$NES_Observed))
-    intercept <- temp_data %>% arrange(desc(phit_pmiss)) %>% select(rank)
+    intercept <- temp_data %>% arrange(desc(phits_pmisses)) %>% select(rank)
     intercept <- intercept[,1][1]
-    rugplot <- ggplot(temp_data, aes(x = rank, y = phit_pmiss)) +
+    rugplot <- ggplot(temp_data, aes(x = rank, y = phits_pmisses)) +
       geom_line(stat = "identity") +
       geom_rug(sides = "t", position = "jitter") + 
       geom_vline(xintercept = intercept, color = "black", linetype = "longdash") + 
