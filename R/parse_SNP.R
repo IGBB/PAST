@@ -148,10 +148,12 @@ parse_SNP <- function(all_data, LD, gff_file, window, r_squared_cutoff, num_core
   
   # UP/DOWNSTREAM LOOP
   for (i in 1:length(LD)) {
+    print(i)
     LD_stream <- LD[[i]]
 
     # BEGIN PROCESSING BY CHROMOSOMES LOOP
     for (name in names(LD_stream)) {
+      print(name)
       temp_data <- LD_stream[[name]] %>% mutate(Marker1 = paste0("S", Locus1, "_", Position1)) %>%
         mutate(Marker2 = paste0("S", Locus1, "_", Position2))
       
@@ -221,7 +223,7 @@ parse_SNP <- function(all_data, LD, gff_file, window, r_squared_cutoff, num_core
       SNP_genes = NULL
       
       # subset gff to only handle this chromosome
-      gff <- full_gff[[name]] %>% mutate(chr = as.integer(chr))
+      gff <- full_gff[[as.character(name)]] %>% mutate(chr = as.numeric(levels(chr))[chr])
       
       # get genes in parallel
       all_genes <- foreach(SNPs_item=SNPS_list, .combine = rbind, .packages = c('dplyr', 'past')) %dopar%{

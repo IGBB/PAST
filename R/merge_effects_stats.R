@@ -23,8 +23,8 @@ merge_data <- function(stats_file, effects_file) {
 
   # Merge stats and effects and return
   all_data <- merge(stats, effects, by = "Marker") %>% 
-    mutate(Trait = Trait.x, Trait.x = NULL, Trait.y = NULL) %>% 
-    select(-add_effect, -add_F, -add_p, -dom_F, -dom_p, -errordf)
+    mutate(Trait = Trait.x, Trait.x = NULL, Trait.y = NULL, Marker=paste0("S", Chr, "_", Pos)) %>% 
+    select(Marker, Chr, Pos, F, p, MarkerR2, Locus.x, Site.x, Allele.x, Effect.x, Obs.x, Locus.y, Site.y, Allele.y, Effect.y, Obs.y, Trait)
 }
 
 
