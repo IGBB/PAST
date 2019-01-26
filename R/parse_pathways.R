@@ -8,7 +8,7 @@ get_factors <- function(gene_ranks) {
 }
 
 get_pmisses <- function(temp_data, genes_in_pathway, factors) {
-  pmisses = factors/(nrow(temp_data) - nrow(genes_in_pathway)+1)
+  pmisses = factors/(nrow(temp_data) - nrow(genes_in_pathway))
   pmisses
 }
 
@@ -44,8 +44,13 @@ find_significant_pathways <- function(genes, pathways_file, gene_number_cutoff, 
   # sample to create 1000 random distributions
   effects <- genes %>% select(Gene, Effect)
   effects <- cbind(effects, sapply(1:sample_size, function(i) sample(effects$Effect)))
-  effects$Gene <- as.character(effects$Gene)
   
+  #effects <- read.table("/home/thrash/Dropbox/maize/effperms/Aflaenv1_effperms.txt", sep="\t", header=TRUE)
+  #effects <- read.table("/home/thrash/Work/marilyn/past-test/aflatoxin/25404.effperms.txt", sep="\t", header=TRUE)
+  results <- read.table("/home/thrash/Dropbox/maize/effperms/Aflaenv1v4_nop_ESq.txt", sep="\t", header=TRUE) %>%
+    mutate(Pathway = as.character(PWid), PWid=NULL, NES_Observed = NESobs, NESobs = NULL, pvalue = pval, pval = NULL, qvalue = qobj.qvalues, qobj.qvalues=NULL) %>%
+    select(Pathway, NES_Observed, FDR, pvalue, qvalue)
+
   pathways_unique <- unique(select(pathways, pathway_id))
   pathways_unique[] <- lapply(pathways_unique, as.character)
   
@@ -53,16 +58,16 @@ find_significant_pathways <- function(genes, pathways_file, gene_number_cutoff, 
   cl <- parallel::makeCluster(num_cores, outfile="")
   registerDoParallel()
   column_observations <- foreach(i=iter(2:(sample_size+2)), .combine = cbind, .packages = c('dplyr', 'past', 'foreach','iterators')) %dopar%{
-    temp_data <- as.data.frame(cbind(effects[,1], effects[,i]))
+    temp_data <- data.frame(matrix("NA", ncol = 2, nrow = nrow(effects)))
     colnames(temp_data) <- c("Gene", "Effect")
-    temp_data$Effect = as.numeric(levels(temp_data$Effect))[temp_data$Effect]
-    temp_data$Gene = as.character(levels(temp_data$Gene))[temp_data$Gene]
+    temp_data$Effect = effects[,i]
+    temp_data$Gene = effects[,1]
     
     if (mode == "resistant") {
       temp_data <- temp_data %>% arrange(Effect) %>% mutate(rank = row_number())
     } else if (mode == "susceptible") {
       temp_data <- temp_data %>% arrange(desc(Effect)) %>% mutate(rank = row_number())
-    } else {mod
+    } else {
       stop("Incorrect mode.")
     }
     
@@ -72,10 +77,10 @@ find_significant_pathways <- function(genes, pathways_file, gene_number_cutoff, 
       genes_in_pathway <- filter(pathways, pathway_id == pathway)
       
       ## get ranks and effects and sort by rank
-      genes_in_pathway <- merge(genes_in_pathway, temp_data, by.x = "gene_id", by.y = "Gene") %>% arrange(rank)
+      genes_in_pathway <- merge(genes_in_pathway, temp_data, by.x = "gene_id", by.y = "Gene") %>% arrange(rank) %>% unique()
       
       ## check cutoff
-      if (nrow(genes_in_pathway) > gene_number_cutoff) {
+      if (nrow(genes_in_pathway) >= gene_number_cutoff) {
         
         # get factors using rank
         print("factors")
@@ -92,7 +97,7 @@ find_significant_pathways <- function(genes, pathways_file, gene_number_cutoff, 
         # get phits-pmisses
         print("phits-pmisses")
         phits_pmisses <- get_phits_pmisses(phits, pmisses)
-        
+        find_max(phits_pmisses)
         # store max phit_pmisses
         column_observations <- rbind(column_observations, find_max(phits_pmisses))
       } else {
@@ -129,10 +134,14 @@ find_significant_pathways <- function(genes, pathways_file, gene_number_cutoff, 
 
   pathways_unique <- mutate(pathways_unique, FDR = FDR_numerators/FDR_denominators) %>% arrange(pvalue)
   pathways_unique <- pathways_unique %>% select(Pathway, ES_Observed, NES_Observed, pvalue, FDR) %>%
-    mutate(qvalue = qvalue(pathways_unique$pvalue, lambda=0, fdr.level = 0.02)$qvalues)
+    mutate(qvalue = qvalue(pathways_unique$pvalue, lambda=0, fdr.level = 0.05)$qvalues)
 
-  pathways_significant <- pathways_unique %>% select(Pathway, NES_Observed) %>% mutate(NESrank = row_number())
-  temp_data <- as.data.frame(cbind(effects[,1], effects[,2]))
+  pathways_significant <- pathways_unique %>% select(Pathway, NES_Observed, FDR, pvalue, qvalue) %>% mutate(NESrank = row_number())
+  
+  temp_data <- data.frame(matrix("NA", ncol = 2, nrow = nrow(effects)))
+  colnames(temp_data) <- c("Gene", "Effect")
+  temp_data$Effect = effects[,2]
+  temp_data$Gene = effects[,1]
   colnames(temp_data) <- c("Gene", "Effect")
   if (mode == "resistant") {
     temp_data <- temp_data %>% arrange(Effect) %>% mutate(rank = row_number())
@@ -141,8 +150,7 @@ find_significant_pathways <- function(genes, pathways_file, gene_number_cutoff, 
   } else {
     stop("Incorrect mode.")
   }
-  temp_data$Effect = as.numeric(levels(temp_data$Effect))[temp_data$Effect]
-  temp_data$Gene = as.character(levels(temp_data$Gene))[temp_data$Gene]
+
   rugplots_data = NULL
   rugplots_data <- foreach(pathway = iter(pathways_significant$Pathway, by='row'), .combine = rbind) %do% {
     genes_in_pathway <- filter(pathways, pathway_id == pathway)
