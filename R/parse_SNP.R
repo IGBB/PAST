@@ -241,7 +241,7 @@ parse_SNP <- function(all_data, LD, gff_file, window, r_squared_cutoff, num_core
       }
     }
   }
-  all_genes = all_genes %>% mutate(name=as.character(levels(name))[name])
+
   group_genes <- split(all_genes, f = all_genes$name)
   tagged_genes <- foreach(block=group_genes, .combine = rbind, .packages = c('dplyr', 'past')) %dopar% {
     tag_SNPs(block)

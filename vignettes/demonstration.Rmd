@@ -39,9 +39,4 @@ rugplots_data_resistant <- find_significant_pathways(genes, "../example/pathways
 rugplots_data_susceptible <- find_significant_pathways(genes, "../example/pathways.txt", 5, "susceptible", 1000, 4)
 plot_pathways(rugplots_data_susceptible, "pvalue", 0.02, "susceptible", "../example/results/")
 plot_pathways(rugplots_data_resistant, "pvalue", 0.02, "resistant", "../example/results/")
-
-gff_file="example/genes.gff3.gz"
-window=1000
-r_squared_cutoff=0.8
-num_cores=4
 ```
