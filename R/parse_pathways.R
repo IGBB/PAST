@@ -44,12 +44,6 @@ find_significant_pathways <- function(genes, pathways_file, gene_number_cutoff, 
   # sample to create 1000 random distributions
   effects <- genes %>% select(Gene, Effect)
   effects <- cbind(effects, sapply(1:sample_size, function(i) sample(effects$Effect)))
-  
-  #effects <- read.table("/home/thrash/Dropbox/maize/effperms/Aflaenv1_effperms.txt", sep="\t", header=TRUE)
-  #effects <- read.table("/home/thrash/Work/marilyn/past-test/aflatoxin/25404.effperms.txt", sep="\t", header=TRUE)
-  results <- read.table("/home/thrash/Dropbox/maize/effperms/Aflaenv1v4_nop_ESq.txt", sep="\t", header=TRUE) %>%
-    mutate(Pathway = as.character(PWid), PWid=NULL, NES_Observed = NESobs, NESobs = NULL, pvalue = pval, pval = NULL, qvalue = qobj.qvalues, qobj.qvalues=NULL) %>%
-    select(Pathway, NES_Observed, FDR, pvalue, qvalue)
 
   pathways_unique <- unique(select(pathways, pathway_id))
   pathways_unique[] <- lapply(pathways_unique, as.character)
@@ -83,19 +77,15 @@ find_significant_pathways <- function(genes, pathways_file, gene_number_cutoff, 
       if (nrow(genes_in_pathway) >= gene_number_cutoff) {
         
         # get factors using rank
-        print("factors")
         factors <- get_factors(genes_in_pathway$rank) 
         
         # get pmisses
-        print("pmisses")
         pmisses <- get_pmisses(temp_data, genes_in_pathway, factors)
         
         # get phits
-        print("phits")
         phits <- get_phits(genes_in_pathway$Effect)
         
         # get phits-pmisses
-        print("phits-pmisses")
         phits_pmisses <- get_phits_pmisses(phits, pmisses)
         find_max(phits_pmisses)
         # store max phit_pmisses

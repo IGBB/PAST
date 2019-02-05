@@ -180,17 +180,24 @@ parse_SNP <- function(all_data, LD, gff_file, window, r_squared_cutoff, num_core
   registerDoParallel()
   
   all_genes = NULL
-  
+
   # UP/DOWNSTREAM LOOP
-  for (i in 1:length(LD)) {
+  for (i in 1:2) {
     print(ifelse(i == 1, "upstream", "dowstream"))
-    LD_stream <- LD[[i]]
+
     # BEGIN PROCESSING BY CHROMOSOMES LOOP
-    for (name in names(LD_stream)) {
+    for (name in names(LD)) {
       print(name)
       if (name %in% names(full_gff)) {
-        temp_data <- LD_stream[[name]] %>% mutate(Marker1 = paste0("S", Locus1, "_", Position1)) %>%
+        temp_data <- LD[[name]] %>% mutate(Marker1 = paste0("S", Locus1, "_", Position1)) %>%
           mutate(Marker2 = paste0("S", Locus1, "_", Position2)) %>% arrange(Position1)
+
+        if (i == 2) {
+          temp_data <- temp_data %>% mutate(temp_p2 = Position1, temp_s2 = Site1, temp_Marker2 = Marker1,
+                                            Position1 = Position2, Site1 = Site2, Marker1 = Marker2) %>%
+            mutate(Site2 = temp_s2, Position2 = temp_p2, Marker2 = temp_Marker2,
+                   temp_s2 = NULL, temp_p2 = NULL, temp_Marker2 = NULL) %>% arrange(Site1)
+        }
         
         temp_data_list <- split(temp_data, temp_data$Position1)
       
