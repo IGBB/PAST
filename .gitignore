@@ -1,9 +1,7 @@
-inst/doc
+Meta
+doc
 .RData
-.Rhistory
-.Rproj.user
-past.Rproj
-.RDataTmp
 .Rbuildignore
-example/KernelColorLD.txt.gz
-example/KernelColorLD.1.txt.gz
+.Rhistory
+.Rproj.user/
+past.Rproj

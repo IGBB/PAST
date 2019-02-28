@@ -1,0 +1,47 @@
+---
+title: "PAST"
+author: "Adam Thrash"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{PAST}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+# Using PAST
+
+The following block of code show how to analyze data with PAST from loading in the data to plotting the rugplots.
+
+```{r eval = FALSE}
+library(dplyr)
+library(parallel)
+library(foreach)
+library(doParallel)
+library(qvalue)
+library(ggplot2)
+library(rlang)
+library(PAST)
+
+demo_association_file = system.file("extdata", "KernelColor.6.association.txt.gz", package = "PAST", mustWork = TRUE)
+demo_effects_file = system.file("extdata", "KernelColor.6.effects.txt.gz", package = "PAST", mustWork = TRUE)
+demo_linkage_disequilibrium_file = system.file("extdata", "KernelColor.6.LD.txt.gz", package = "PAST", mustWork = TRUE)
+demo_genes_file = system.file("extdata", "genes.gff3.gz", package = "PAST", mustWork = TRUE)
+demo_pathways_file = system.file("extdata", "pathways.txt.gz", package = "PAST", mustWork = TRUE)
+
+merged_data <- merge_data(demo_association_file, demo_effects_file)
+LD <- parse_LD(demo_linkage_disequilibrium_file) # parse_LD can take gzip-compressed files or plain text
+genes <-parse_SNP(merged_data, LD, demo_genes_file, 1000, 0.8, 2)
+rugplots_data_resistant <- analyze_pathways(genes, demo_pathways_file, 5, "decreasing", 1000, 2)
+rugplots_data_susceptible <- analyze_pathways(genes, demo_pathways_file, 5, "increasing", 1000, 2)
+plot_pathways(rugplots_data_susceptible, "pvalue", 0.02, "increasing", "results/")
+plot_pathways(rugplots_data_resistant, "pvalue", 0.02, "decreasing", "results/")
+```
+
