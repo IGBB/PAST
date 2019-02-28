@@ -1,15 +1,10 @@
 library(shiny)
 library(shinydashboard)
 library(dplyr)
-library(parallel)
-library(foreach)
-library(doParallel)
 library(ggplot2)
-library(qvalue)
 library(gridExtra)
 library(DT)
-library(past)
-library(rlang)
+library(PAST)
 
 ui <- dashboardPage(
   title = "PAST",
@@ -115,7 +110,7 @@ server <- function(input, output) {
       }
       write.table(pathways, paste0(input$title, ".pathways.tsv"), sep = "\t")
       write.table(
-        pathways %>% dplyr::filter(.data, pvalue < significance_cutoff),
+        pathways %>% dplyr::filter(data$pvalue < significance_cutoff),
         paste0(input$title, ".pathways.filtered.tsv"),
         sep = "\t"
       )
@@ -128,16 +123,19 @@ server <- function(input, output) {
       if (is.null(pathways))
         return(NULL)
       rugplots_data <-
-        pathways %>% dplyr::arrange(.data, NESrank) %>%
-        dplyr::filter(.data, pvalue < significance_cutoff)
+        pathways %>% dplyr::arrange(.data$NESrank) %>%
+        dplyr::filter(.data$pvalue < significance_cutoff)
       rugplots_split <- split(rugplots_data, rugplots_data$NESrank)
       for (rank in names(rugplots_split)) {
         temp_data <- rugplots_split[[rank]]
         title <-
-          paste0(unique(as.character(temp_data$pathway_id)), " - ", unique(as.character(temp_data$pathway_name)))
+          paste0(unique(as.character(temp_data$pathway_id)),
+                 " - ",
+                 unique(as.character(temp_data$pathway_name)))
         print(title)
         intercept <-
-          temp_data %>% dplyr::arrange(.data, desc(phits_pmisses)) %>% dplyr::select(rank)
+          temp_data %>% dplyr::arrange(desc(.data$phits_pmisses)) %>%
+          dplyr::select(rank)
         intercept <- intercept[, 1][1]
         rugplot <-
           ggplot(temp_data, aes(x = rank, y = phits_pmisses)) +
@@ -154,7 +152,10 @@ server <- function(input, output) {
             panel.background = element_rect (color = "black", fill = "pink")
           )
         path <-
-          paste0(input$title, ".", unique(as.character(temp_data$pathway_id)), ".png")
+          paste0(input$title,
+                 ".",
+                 unique(as.character(temp_data$pathway_id)),
+                 ".png")
         print(path)
         fs <- c(fs, path)
         ggsave(path, rugplot)
@@ -222,11 +223,11 @@ server <- function(input, output) {
     num_cores <- input$num_cores
     print("Finding pathways")
     analyze_pathways(genes,
-                              pathway_file$datapath,
-                              gene_cutoff,
-                              mode,
-                              sample,
-                              num_cores)
+                     pathway_file$datapath,
+                     gene_cutoff,
+                     mode,
+                     sample,
+                     num_cores)
   })
   load_pathways_from_file <- reactive({
     pathway_file <- input$load_file
@@ -243,8 +244,9 @@ server <- function(input, output) {
     significance_cutoff <- input$significance_cutoff
     if (is.null(pathways))
       return(NULL)
-    pathways <- pathways %>% dplyr::select(.data, pathway_id, pvalue, qvalue) %>%
-      unique() %>% dplyr::filter(.data, pvalue < significance_cutoff)
+    pathways <- pathways %>%
+      dplyr::select(.data$pathway_id, .data$pvalue, .data$qvalue) %>%
+      unique() %>% dplyr::filter(.data$pvalue < significance_cutoff)
     datatable(pathways,
               rownames = FALSE,
               options = list(paging = FALSE))
@@ -259,17 +261,20 @@ server <- function(input, output) {
     if (is.null(pathways))
       return(NULL)
     rugplots_data <- pathways %>%
-      dplyr::arrange(.data, NESrank) %>%
-      dplyr::filter(.data, pvalue < significance_cutoff)
-    rugplots_split <- split(rugplots_data, rugplots_data$NESrank)
+      dplyr::arrange(.data$pathway_number) %>%
+      dplyr::filter(.data$pvalue < significance_cutoff)
+    rugplots_split <-
+      split(rugplots_data, rugplots_data$pathway_number)
     p <- list()
     for (rank in names(rugplots_split)) {
       temp_data <- rugplots_split[[rank]]
       title <-
-        paste0(unique(as.character(temp_data$pathway_id)), " - ", unique(as.character(temp_data$pathway_name)))
+        paste0(unique(as.character(temp_data$pathway_id)),
+               " - ",
+               unique(as.character(temp_data$pathway_name)))
       intercept <- temp_data %>%
-        dplyr::arrange(.data, desc(phits_pmisses)) %>%
-        dplyr::select(.data, rank)
+        dplyr::arrange(desc(.data$phits_pmisses)) %>%
+        dplyr::select(.data$rank)
       intercept <- intercept[, 1][1]
       rugplot <-
         ggplot(temp_data, aes(x = rank, y = phits_pmisses)) +
@@ -287,9 +292,15 @@ server <- function(input, output) {
         )
       p[[rank]] <- rugplot
     }
-    do.call("grid.arrange", c(p, ncol = 3))
+    if (nrow(rugplots_data) == 0) {
+      ggplot() + geom_blank()
+    } else {
+      columns <- floor(sqrt(length(p)))
+      do.call("grid.arrange", c(p, ncol = columns))
+    }
   }
   , height = reactive({
+    columns <- floor(sqrt(length(p)))
     if (input$type == "new") {
       pathways <- find_pathways()
     } else {
@@ -300,10 +311,13 @@ server <- function(input, output) {
     if (is.null(pathways))
       return(100)
     pathways <-
-      pathways %>% dplyr::select(.data, pathway_id, pvalue, qvalue) %>%
+      pathways %>%
+      dplyr::select(.data$pathway_id, .data$pvalue, .data$qvalue) %>%
       unique() %>%
-      dplyr::filter(.data, pvalue < significance_cutoff)
-    return(nrow(pathways) / 3 * 200)
+      dplyr::filter(.data$pvalue < significance_cutoff)
+    if (nrow(pathways) == 0)
+      return(100)
+    return(nrow(pathways) / columns * 200)
   }))
 }
 shinyApp(ui = ui, server = server)

@@ -19,9 +19,9 @@ The association data and the effects data merged into a dataframe
 Merge Data
 }
 \examples{
-demo_association_file = system.file("extdata", 
+demo_association_file = system.file("extdata",
 "association.txt.xz", package = "PAST", mustWork = TRUE)
-demo_effects_file = system.file("extdata", 
+demo_effects_file = system.file("extdata",
 "effects.txt.xz", package = "PAST", mustWork = TRUE)
 merged_data <- merge_data(demo_association_file, demo_effects_file)
 }

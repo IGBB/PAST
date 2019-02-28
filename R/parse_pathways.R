@@ -37,7 +37,7 @@ find_max <- function(phits_pmisses) {
 # This isn't really global, but R CMD check
 # doesn't understand how to deal with variable
 # created by foreach loops
-globalVariables("pathway") 
+globalVariables("pathway")
 
 #' Analyze Pathways
 #'
@@ -116,7 +116,8 @@ analyze_pathways <-
         column_observations <- data.frame()
 
         foreach(pathway = iter(pathways_unique$pathway_id, by = "row")) %do% {
-          genes_in_pathway <- dplyr::filter(pathways, pathways$pathway_id == pathway)
+          genes_in_pathway <-
+            dplyr::filter(pathways, pathways$pathway_id == pathway)
 
           ## get ranks and effects and sort by rank
           genes_in_pathway <-
@@ -132,7 +133,8 @@ analyze_pathways <-
             factors <- get_factors(genes_in_pathway$rank)
 
             # get pmisses
-            pmisses <- get_pmisses(temp_data, genes_in_pathway, factors)
+            pmisses <-
+              get_pmisses(temp_data, genes_in_pathway, factors)
 
             # get phits
             phits <- get_phits(genes_in_pathway$Effect)
@@ -160,9 +162,11 @@ analyze_pathways <-
     pathways_unique <- pathways_unique %>%
       dplyr::filter(!is.na(.data$ES_Observed))
     pathways_unique <- pathways_unique %>%
-      dplyr::mutate(permutation_mean = apply(pathways_unique[, 3:(sample_size + 2)], 1, mean))
+      dplyr::mutate(permutation_mean =
+                      apply(pathways_unique[, 3:(sample_size + 2)], 1, mean))
     pathways_unique <- pathways_unique %>%
-      dplyr::mutate(permutation_standard_deviation = apply(pathways_unique[, 3:(sample_size + 2)], 1, sd))
+      dplyr::mutate(permutation_standard_deviation =
+                      apply(pathways_unique[, 3:(sample_size + 2)], 1, sd))
     pathways_unique <- pathways_unique %>%
       dplyr::mutate(
         NES_Observed = (.data$ES_Observed - .data$permutation_mean) / .data$permutation_standard_deviation
@@ -174,7 +178,8 @@ analyze_pathways <-
     pathways_unique <- pathways_unique %>%
       dplyr::mutate(pvalue = 1 - pnorm(.data$NES_Observed))
 
-    FDR_denominators <- rep(NA, length(pathways_unique$NES_Observed))
+    FDR_denominators <-
+      rep(NA, length(pathways_unique$NES_Observed))
     for (i in 1:length(pathways_unique$NES_Observed)) {
       FDR_denominators[i] <-
         (sum(
@@ -192,16 +197,24 @@ analyze_pathways <-
       dplyr::mutate(pathways_unique, FDR = FDR_numerators / FDR_denominators) %>%
       dplyr::arrange(.data$pvalue)
     pathways_unique <- pathways_unique %>%
-      dplyr::select(.data$Pathway, .data$ES_Observed, .data$NES_Observed, .data$pvalue, .data$FDR) %>%
+      dplyr::select(.data$Pathway,
+                    .data$ES_Observed,
+                    .data$NES_Observed,
+                    .data$pvalue,
+                    .data$FDR) %>%
       dplyr::mutate(qvalue = qvalue(
-                     pathways_unique$pvalue,
-                     lambda = 0,
-                     fdr.level = 0.05
-                   )$qvalues)
+        pathways_unique$pvalue,
+        lambda = 0,
+        fdr.level = 0.05
+      )$qvalues)
 
     pathways_significant <- pathways_unique %>%
-      dplyr::select(.data$Pathway, .data$NES_Observed, .data$FDR, .data$pvalue, .data$qvalue) %>%
-      dplyr::mutate(NESrank = row_number())
+      dplyr::select(.data$Pathway,
+                    .data$NES_Observed,
+                    .data$FDR,
+                    .data$pvalue,
+                    .data$qvalue) %>%
+      dplyr::mutate(pathway_number = row_number(), NESrank = NULL)
 
     temp_data <-
       data.frame(matrix("NA", ncol = 2, nrow = nrow(effects)))
@@ -227,7 +240,8 @@ analyze_pathways <-
         pathway = iter(pathways_significant$Pathway, by = "row"),
         .combine = rbind
       ) %do% {
-        genes_in_pathway <- dplyr::filter(pathways, pathways$pathway_id == pathway)
+        genes_in_pathway <-
+          dplyr::filter(pathways, pathways$pathway_id == pathway)
 
         ## get ranks and effects and sort by rank
         genes_in_pathway <-
@@ -238,7 +252,8 @@ analyze_pathways <-
           dplyr::arrange(rank)
 
         # get factors using rank
-        genes_in_pathway$factors <- get_factors(genes_in_pathway$rank)
+        genes_in_pathway$factors <-
+          get_factors(genes_in_pathway$rank)
 
         # get pmisses
         genes_in_pathway$pmisses <-
@@ -261,7 +276,13 @@ analyze_pathways <-
       }
     rugplots_data <- merge(
       rugplots_data %>%
-        dplyr::select(.data$pathway_id, .data$NESrank, .data$gene_id, .data$rank, .data$phits_pmisses),
+        dplyr::select(
+          .data$pathway_id,
+          .data$pathway_number,
+          .data$gene_id,
+          .data$rank,
+          .data$phits_pmisses
+        ),
       pathways %>%
         dplyr::select(.data$pathway_id, .data$pathway_name) %>%
         unique(),
@@ -269,10 +290,16 @@ analyze_pathways <-
     )
     rugplots_data <- merge(
       rugplots_data,
-      dplyr::select(pathways_unique, .data$Pathway, .data$pvalue, .data$FDR, .data$qvalue),
+      dplyr::select(
+        pathways_unique,
+        .data$Pathway,
+        .data$pvalue,
+        .data$FDR,
+        .data$qvalue
+      ),
       by.x = "pathway_id",
       by.y = "Pathway"
     ) %>%
-      dplyr::arrange(.data$NESrank)
+      dplyr::arrange(.data$pathway_number)
     rugplots_data
   }

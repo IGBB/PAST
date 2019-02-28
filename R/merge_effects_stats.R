@@ -10,15 +10,15 @@
 #' @import utils
 #' @import dplyr
 #' @examples
-#' demo_association_file = system.file("extdata", 
+#' demo_association_file = system.file("extdata",
 #' "association.txt.xz", package = "PAST", mustWork = TRUE)
-#' demo_effects_file = system.file("extdata", 
+#' demo_effects_file = system.file("extdata",
 #' "effects.txt.xz", package = "PAST", mustWork = TRUE)
 #' merged_data <- merge_data(demo_association_file, demo_effects_file)
 merge_data <- function(association_file, effects_file) {
   stats <- read.table(association_file, header = TRUE, sep = "\t")
   effects <- read.table(effects_file, header = TRUE, sep = "\t")
-  
+
   # Delete all markers in effects and stats with more or less alleles than 2
   non_biallelic <- effects %>%
     dplyr::group_by(.data$Marker) %>%
@@ -28,10 +28,10 @@ merge_data <- function(association_file, effects_file) {
     effects %>% dplyr::filter(!(.data$Marker %in% non_biallelic$Marker))
   stats <-
     stats %>% dplyr::filter(!(.data$Marker %in% non_biallelic$Marker))
-  
+
   # Remove all NaN data to prevent math with NaN
   stats <- stats %>% dplyr::filter(.data$MarkerR2 != "NaN")
-  
+
   # Split effects into even and odd rows and
   # recombine into a single row without duplicate columns
   odd_effects <- effects[seq(1, nrow(effects), by = 2), ]
@@ -43,7 +43,7 @@ merge_data <- function(association_file, effects_file) {
     Trait.x = NULL,
     Trait.y = NULL
   )
-  
+
   # Merge stats and effects and return
   all_data <- merge(stats, effects, by = "Marker") %>%
     dplyr::mutate(

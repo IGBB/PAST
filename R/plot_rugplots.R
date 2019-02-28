@@ -20,7 +20,7 @@ plot_pathways <-
            mode,
            output_directory) {
     dir.create(file.path(output_directory), showWarnings = FALSE)
-    
+
     rugplots_data <- rugplots_data %>%
       dplyr::arrange(.data$NESrank)
     write.table(
@@ -30,7 +30,7 @@ plot_pathways <-
       row.names = FALSE,
       quote = FALSE
     )
-    
+
     if (filter_type == "rank") {
       rugplots_data <- rugplots_data %>%
         dplyr::filter(.data$NESrank <= filter_parameter)
@@ -57,12 +57,15 @@ plot_pathways <-
 
     for (rank in names(rugplots_split)) {
       temp_data <- rugplots_split[[rank]]
-      title <- paste0(unique(as.character(temp_data$pathway_id)), " - ", unique(as.character(temp_data$pathway_name)))
+      title <-
+        paste0(unique(as.character(temp_data$pathway_id)), " - ", unique(as.character(temp_data$pathway_name)))
       intercept <- temp_data %>%
         dplyr::arrange(desc(.data$phits_pmisses)) %>%
         dplyr::select(.data$rank)
       intercept <- intercept[, 1][1]
-      rugplot <- ggplot(temp_data, aes(x = temp_data$rank, y = temp_data$phits_pmisses)) +
+      rugplot <-
+        ggplot(temp_data,
+               aes(x = temp_data$rank, y = temp_data$phits_pmisses)) +
         geom_line(stat = "identity") +
         geom_rug(sides = "t", position = "jitter") +
         geom_vline(xintercept = intercept,

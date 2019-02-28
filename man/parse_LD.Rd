@@ -16,7 +16,7 @@ The linkage disequilibrium data in a list containing dataframes for each chromos
 Parse Linkage Disequilibrium
 }
 \examples{
-demo_linkage_disequilibrium_file = system.file("extdata", 
+demo_linkage_disequilibrium_file = system.file("extdata",
 "LD.txt.xz", package = "PAST", mustWork = TRUE)
 LD <- parse_LD(demo_linkage_disequilibrium_file)
 }

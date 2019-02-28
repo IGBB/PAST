@@ -8,7 +8,7 @@
 #' @export
 #'
 #' @examples
-#' demo_linkage_disequilibrium_file = system.file("extdata", 
+#' demo_linkage_disequilibrium_file = system.file("extdata",
 #' "LD.txt.xz", package = "PAST", mustWork = TRUE)
 #' LD <- parse_LD(demo_linkage_disequilibrium_file)
 parse_LD <- function(LD_file) {
@@ -24,6 +24,6 @@ parse_LD <- function(LD_file) {
       .data$Dist_bp,
       .data$R.2
     )
-  LD_all <- LD_all[complete.cases(LD_all),]
+  LD_all <- LD_all[complete.cases(LD_all), ]
   split(LD_all, f = LD_all$Locus1)
 }

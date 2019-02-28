@@ -26,12 +26,12 @@ A dataframe of genes from the SNP data
 Parse SNP data and return genes
 }
 \examples{
-demo_association_file = system.file("extdata", 
+demo_association_file = system.file("extdata",
 "association.txt.xz", package = "PAST", mustWork = TRUE)
-demo_effects_file = system.file("extdata", 
+demo_effects_file = system.file("extdata",
 "effects.txt.xz", package = "PAST", mustWork = TRUE)
 merged_data <- merge_data(demo_association_file, demo_effects_file)
-demo_linkage_disequilibrium_file = system.file("extdata", 
+demo_linkage_disequilibrium_file = system.file("extdata",
 "LD.txt.xz", package = "PAST", mustWork = TRUE)
 LD <- parse_LD(demo_linkage_disequilibrium_file)
 demo_genes_file = system.file("extdata", "genes.gff.xz", package = "PAST", mustWork = TRUE)

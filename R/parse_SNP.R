@@ -46,9 +46,9 @@ parse_temp <- function(data, r_squared_cutoff) {
   data <- data %>% dplyr::arrange(.data$Dist_bp)
   linked <- data %>% dplyr::filter(.data$R.2 >= r_squared_cutoff)
   unlinked <- data %>% dplyr::filter(.data$R.2 < r_squared_cutoff)
-  
+
   if (nrow(unlinked) == nrow(data)) {
-    return <- unlinked[1,]
+    return <- unlinked[1, ]
   } else {
     return <- linked %>% filter(.data$R.2 >= r_squared_cutoff)
   }
@@ -65,41 +65,41 @@ parse_temp <- function(data, r_squared_cutoff) {
 #' @return A single SNP representing the whole block
 parse_chunk <- function(block, r_squared_cutoff) {
   block <- block %>% dplyr::mutate(linked_snp_count = nrow(block))
-  if (block[1,]$linked_snp_count > 1) {
+  if (block[1, ]$linked_snp_count > 1) {
     # count the number of negative/positive effects in each block
     negative <- sum(block$SNP2_effect < 0)
     positive <- sum(block$SNP2_effect > 0)
-    
+
     # Find SNP with largest negative or positive effect
     if (positive > negative) {
       # sort in descending order
       block <-
         block %>% dplyr::arrange(desc(.data$SNP2_effect), .data$Dist_bp)
-      
+
       # get top row
-      block <- block[1,]
-      
+      block <- block[1, ]
+
     } else if (negative > positive) {
       # sort in ascending order
       block <-
         block %>% dplyr::arrange(.data$SNP2_effect, .data$Dist_bp)
-      
+
       # get top row
-      block <- block[1,]
-      
+      block <- block[1, ]
+
     } else if (negative == positive) {
       if (block$SNP1_effect[[1]] > 0) {
         # sort in descending order
         block <- block %>% dplyr::arrange(desc(.data$SNP2_effect))
-        
+
         # get top row
-        block <- block[1,] %>% dplyr::mutate(linked_snp_count = -1)
+        block <- block[1, ] %>% dplyr::mutate(linked_snp_count = -1)
       } else{
         # sort in ascending order
         block <- block %>% dplyr::arrange(.data$SNP2_effect)
-        
+
         # get top row
-        block <- block[1,] %>% dplyr::mutate(linked_snp_count = -1)
+        block <- block[1, ] %>% dplyr::mutate(linked_snp_count = -1)
       }
     }
   } else {
@@ -129,19 +129,19 @@ select_gene_from_block <- function(untagged_genes) {
     dplyr::mutate(linked_snp_count = ifelse(.data$linked_snp_count <= 0, 1, .data$linked_snp_count))
   negative <- sum(neg_genes$linked_snp_count)
   positive <- sum(pos_genes$linked_snp_count)
-  
+
   if (positive > negative) {
     untagged_genes <-
       untagged_genes %>% dplyr::arrange(desc(.data$Effect), desc(.data$P_value))
-    tag_snp <- untagged_genes[1,]
+    tag_snp <- untagged_genes[1, ]
   } else if (negative > positive) {
     untagged_genes <-
       untagged_genes %>% dplyr::arrange(.data$Effect, .data$P_value)
-    tag_snp <- untagged_genes[1,]
+    tag_snp <- untagged_genes[1, ]
   } else if (positive == negative) {
-    pos_max <- pos_genes[1,]
-    neg_max <- neg_genes[1,]
-    
+    pos_max <- pos_genes[1, ]
+    neg_max <- neg_genes[1, ]
+
     if (pos_max$Effect > abs(neg_max$Effect)) {
       tag_snp <- pos_max
     }
@@ -206,43 +206,43 @@ find_genes <- function(gff, snp_df, window) {
         )
       )
     ))
-  
+
   more_linked <- snp_df %>%
     dplyr::filter(.data$linked_snp_count > 1) %>%
     dplyr::mutate(Position = ifelse(
-                    .data$SNP1_effect < 0 & .data$SNP2_effect < 0,
-                    ifelse(
-                      .data$Dist_bp < window,
-                      ifelse(
-                        .data$SNP1_effect != .data$SNP2_effect,
-                        ifelse(
-                          .data$SNP1_effect < .data$SNP2_effect,
-                          .data$Position1,
-                          .data$Position2
-                        ),
-                        .data$Position2
-                      ),
-                      .data$Position2
-                    ),
-                    ifelse(
-                      .data$SNP1_effect > 0 & .data$SNP2_effect > 0,
-                      ifelse(
-                        .data$Dist_bp < window,
-                        ifelse(
-                          .data$SNP1_effect != .data$SNP2_effect,
-                          ifelse(
-                            .data$SNP1_effect > .data$SNP2_effect,
-                            .data$Position1,
-                            .data$Position2
-                          ),
-                          .data$Position2
-                        ),
-                        .data$Position2
-                      ),
-                      .data$Position2
-                    )
-                  ))
-  
+      .data$SNP1_effect < 0 & .data$SNP2_effect < 0,
+      ifelse(
+        .data$Dist_bp < window,
+        ifelse(
+          .data$SNP1_effect != .data$SNP2_effect,
+          ifelse(
+            .data$SNP1_effect < .data$SNP2_effect,
+            .data$Position1,
+            .data$Position2
+          ),
+          .data$Position2
+        ),
+        .data$Position2
+      ),
+      ifelse(
+        .data$SNP1_effect > 0 & .data$SNP2_effect > 0,
+        ifelse(
+          .data$Dist_bp < window,
+          ifelse(
+            .data$SNP1_effect != .data$SNP2_effect,
+            ifelse(
+              .data$SNP1_effect > .data$SNP2_effect,
+              .data$Position1,
+              .data$Position2
+            ),
+            .data$Position2
+          ),
+          .data$Position2
+        ),
+        .data$Position2
+      )
+    ))
+
   problem_linked <- snp_df %>%
     dplyr::filter(.data$linked_snp_count == -1) %>%
     dplyr::mutate(Position = ifelse(
@@ -270,7 +270,7 @@ find_genes <- function(gff, snp_df, window) {
         "problem"
       )
     ))
-  
+
   snp_df <-
     rbind(no_linked, one_linked, problem_linked, more_linked) %>%
     dplyr::filter(Position != "problem") %>%
@@ -347,12 +347,12 @@ find_genes <- function(gff, snp_df, window) {
 #' @export
 #'
 #' @examples
-#' demo_association_file = system.file("extdata", 
+#' demo_association_file = system.file("extdata",
 #' "association.txt.xz", package = "PAST", mustWork = TRUE)
-#' demo_effects_file = system.file("extdata", 
+#' demo_effects_file = system.file("extdata",
 #' "effects.txt.xz", package = "PAST", mustWork = TRUE)
 #' merged_data <- merge_data(demo_association_file, demo_effects_file)
-#' demo_linkage_disequilibrium_file = system.file("extdata", 
+#' demo_linkage_disequilibrium_file = system.file("extdata",
 #' "LD.txt.xz", package = "PAST", mustWork = TRUE)
 #' LD <- parse_LD(demo_linkage_disequilibrium_file)
 #' demo_genes_file = system.file("extdata", "genes.gff.xz", package = "PAST", mustWork = TRUE)
@@ -365,33 +365,32 @@ parse_SNP <-
            window,
            r_squared_cutoff,
            num_cores) {
-
     full_gff <- read_gff(gff_file)
     chromosomes <- full_gff %>%
       dplyr::select(.data$chr) %>%
       dplyr::arrange(.data$chr) %>%
       unique()
-    
+
     cl <- parallel::makeCluster(num_cores, outfile = "")
     registerDoParallel(cl)
-    
+
     all_genes <- NULL
-    
+
     # UP/DOWNSTREAM LOOP
     for (i in 1:2) {
       print(ifelse(i == 1, "upstream", "dowstream"))
-      
+
       # BEGIN PROCESSING BY CHROMOSOMES LOOP
       for (chromosome in names(LD)) {
         print(chromosome)
-        
+
         if (chromosome %in% chromosomes$chr) {
           temp_data <-
             LD[[chromosome]] %>%
             dplyr::mutate(Marker1 = paste0("S", .data$Locus1, "_", .data$Position1)) %>%
             dplyr::mutate(Marker2 = paste0("S", .data$Locus1, "_", .data$Position2)) %>%
             dplyr::arrange(.data$Position1)
-          
+
           if (i == 2) {
             temp_data <-
               temp_data %>%
@@ -414,7 +413,7 @@ parse_SNP <-
               dplyr::arrange(.data$Site1)
           }
           temp_data_list <- split(temp_data, temp_data$Position1)
-          
+
           print("Parsing unlinked...")
           temp_data <-
             foreach(
@@ -424,9 +423,10 @@ parse_SNP <-
             ) %dopar% {
               parse_temp(data, r_squared_cutoff)
             }
-          
-          chr_data <- dplyr::filter(all_data, .data$Chr == as.integer(chromosome))
-          
+
+          chr_data <-
+            dplyr::filter(all_data, .data$Chr == as.integer(chromosome))
+
           print("Getting effects...")
           # look up p-value and effect data for SNP1
           temp_data <-
@@ -446,7 +446,7 @@ parse_SNP <-
               .data$SNP1_effect,
               .data$Marker2
             )
-          
+
           # look up p-value and effect data for SNP2
           temp_data <-
             merge(temp_data, chr_data, by.x = "Marker2", by.y = "Marker") %>%
@@ -468,13 +468,13 @@ parse_SNP <-
               .data$SNP2_effect
             ) %>%
             dplyr::arrange(.data$Position1)
-          
+
           index <- c(0, cumsum(abs(diff(
             temp_data$Site2
           )) > 1))
           temp_data_list <-
             split(temp_data, paste(temp_data$Position1, index))
-          
+
           print("Parsing chunks...")
           temp_data <-
             foreach(
@@ -484,7 +484,7 @@ parse_SNP <-
             ) %dopar% {
               parse_chunk(data, r_squared_cutoff)
             }
-          
+
           split <- 1000
           snp_list <-
             split(temp_data,
@@ -493,10 +493,10 @@ parse_SNP <-
                     length.out = nrow(temp_data),
                     each = ceiling(nrow(temp_data) / split)
                   ))
-          
+
           # subset gff to only handle this chromosome
           gff <- dplyr::filter(full_gff, .data$chr == chromosome)
-          
+
           # get genes in parallel
           print("Finding genes...")
           chr_genes <-
@@ -507,12 +507,12 @@ parse_SNP <-
             ) %dopar% {
               find_genes(gff, snp_chunk, window)
             }
-          
+
           all_genes <- rbind(all_genes, chr_genes)
         }
       }
     }
-    
+
     group_genes <- split(all_genes, f = all_genes$name)
     tagged_genes <-
       foreach(
@@ -522,7 +522,7 @@ parse_SNP <-
       ) %dopar% {
         select_gene_from_block(block)
       }
-    
+
     tagged_genes %>%
       dplyr::mutate(Chromosome = .data$Locus1, Gene = .data$name) %>%
       dplyr::select(.data$Chromosome,
