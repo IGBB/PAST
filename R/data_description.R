@@ -9,7 +9,6 @@
 #'   \item{Gene}{The name of the gene}
 #'   \item{Effect}{The phenotypic effect that the allele had on the trait. The strongest effect is assigned to the gene.}
 #'   \item{P_value}{The p-value from the T-test of each individual marker-trait association for the SNP associated with the gene.}
-#'   ...
 #' }
 "genes"
 
@@ -27,6 +26,5 @@
 #'   \item{pvalue}{he probability of seeing the test statistic (in this case, the peak running enrichment score) by chance}
 #'   \item{FDR}{The FDR of the pathway (not really)}
 #'   \item{qvalue}{The FDR adjusted p-value is the q-value. If set at 0.05, this implies that 5% of significant tests will result in false positives}
-#'   ...
 #' }
 "rugplots_data"

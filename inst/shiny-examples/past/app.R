@@ -1,15 +1,7 @@
-library(shiny)
-library(shinydashboard)
-library(dplyr)
-library(ggplot2)
-library(gridExtra)
-library(DT)
-library(PAST)
-
 ui <- dashboardPage(
   title = "PAST",
-  dashboardHeader(title = textOutput("title")),
-  dashboardSidebar(
+  shinydashboard::dashboardHeader(title = textOutput("title")),
+  shinydashboard::dashboardSidebar(
     sidebarMenu(
       textInput("title", "Analysis Title", value = "New Analysis"),
       selectInput(
@@ -32,13 +24,13 @@ ui <- dashboardPage(
       )
     )
   ),
-  dashboardBody(fluidRow(
+  shinydashboard::dashboardBody(fluidRow(
     box(
       title = textOutput("box_title_table"),
       width = 4,
       status = "primary",
       solidHeader = TRUE,
-      dataTableOutput("pathways"),
+      DT::dataTableOutput("pathways"),
       style = "height:82vh; overflow-y: scroll;"
     ),
     box(
@@ -235,7 +227,7 @@ server <- function(input, output) {
       return(NULL)
     read.table(pathway_file$datapath, header = TRUE, sep = "\t")
   })
-  output$pathways <- renderDataTable({
+  output$pathways <- DT::renderDataTable({
     if (input$type == "new") {
       pathways <- find_pathways()
     } else {

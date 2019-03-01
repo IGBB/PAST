@@ -11,7 +11,6 @@
   \item{Gene}{The name of the gene}
   \item{Effect}{The phenotypic effect that the allele had on the trait. The strongest effect is assigned to the gene.}
   \item{P_value}{The p-value from the T-test of each individual marker-trait association for the SNP associated with the gene.}
-  ...
 }}
 \usage{
 genes
