@@ -123,9 +123,9 @@ server <- function(input, output) {
       if (is.null(pathways))
         return(NULL)
       rugplots_data <-
-        pathways %>% dplyr::arrange(.data$NESrank) %>%
+        pathways %>% dplyr::arrange(.data$pathway_number) %>%
         dplyr::filter(.data$pvalue < significance_cutoff)
-      rugplots_split <- split(rugplots_data, rugplots_data$NESrank)
+      rugplots_split <- split(rugplots_data, rugplots_data$pathway_number)
       for (rank in names(rugplots_split)) {
         temp_data <- rugplots_split[[rank]]
         title <-
@@ -134,11 +134,11 @@ server <- function(input, output) {
                  unique(as.character(temp_data$pathway_name)))
         print(title)
         intercept <-
-          temp_data %>% dplyr::arrange(desc(.data$phits_pmisses)) %>%
+          temp_data %>% dplyr::arrange(desc(.data$running_enrichment_score)) %>%
           dplyr::select(rank)
         intercept <- intercept[, 1][1]
         rugplot <-
-          ggplot(temp_data, aes(x = rank, y = phits_pmisses)) +
+          ggplot(temp_data, aes(x = rank, y = running_enrichment_score)) +
           geom_line(stat = "identity") +
           geom_rug(sides = "t", position = "jitter") +
           geom_vline(xintercept = intercept,
@@ -273,11 +273,11 @@ server <- function(input, output) {
                " - ",
                unique(as.character(temp_data$pathway_name)))
       intercept <- temp_data %>%
-        dplyr::arrange(desc(.data$phits_pmisses)) %>%
+        dplyr::arrange(desc(.data$running_enrichment_score)) %>%
         dplyr::select(.data$rank)
       intercept <- intercept[, 1][1]
       rugplot <-
-        ggplot(temp_data, aes(x = rank, y = phits_pmisses)) +
+        ggplot(temp_data, aes(x = rank, y = running_enrichment_score)) +
         geom_line(stat = "identity") +
         geom_rug(sides = "t", position = "jitter") +
         geom_vline(xintercept = intercept,

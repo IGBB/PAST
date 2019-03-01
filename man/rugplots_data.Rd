@@ -5,19 +5,7 @@
 \alias{rugplots_data}
 \title{A dataframe containing the necessary information
 to create the rugplots in the next step}
-\format{A data frame with 17 rows and 9 variables:
-\describe{
-  \item{pathway_id}{The pathway ID from the pathways file}
-  \item{NESrank}{A variable that should be renamed to pathway number}
-  \item{gene_id}{The physical location, in base pairs from the start of the chromosome, where the SNP is found. This may vary depending on the reference sequence version which was used to align the SNPs.}
-  \item{rank}{The rank of the gene in the data by its effect on the trait.}
-  \item{phits_pmisses}{The running enrichment score}
-  \item{pathway_name}{The pathway name from the pathways file}
-  \item{pvalue}{The p-value of the pathway}
-  \item{FDR}{The FDR of the pathway (not really)}
-  \item{qvalue}{The q-adjusted pvalue}
-  ...
-}}
+\format{An object of class \code{data.frame} with 17 rows and 9 columns.}
 \usage{
 rugplots_data
 }

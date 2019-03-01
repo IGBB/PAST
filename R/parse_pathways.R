@@ -23,14 +23,14 @@ get_phits <- function(gene_effects) {
   phits
 }
 
-get_phits_pmisses <- function(phits, pmisses) {
-  phits_pmisses <- phits - pmisses
-  phits_pmisses
+get_running_enrichment_score <- function(phits, pmisses) {
+  running_enrichment_score <- phits - pmisses
+  running_enrichment_score
 }
 
-find_max <- function(phits_pmisses) {
-  phits_pmisses <- sort(phits_pmisses, decreasing = TRUE)
-  max <- phits_pmisses[[1]]
+find_max <- function(running_enrichment_score) {
+  running_enrichment_score <- sort(running_enrichment_score, decreasing = TRUE)
+  max <- running_enrichment_score[[1]]
   max
 }
 
@@ -140,11 +140,11 @@ analyze_pathways <-
             phits <- get_phits(genes_in_pathway$Effect)
 
             # get phits-pmisses
-            phits_pmisses <- get_phits_pmisses(phits, pmisses)
-            find_max(phits_pmisses)
+            running_enrichment_score <- get_running_enrichment_score(phits, pmisses)
+            find_max(running_enrichment_score)
             # store max phit_pmisses
             column_observations <-
-              rbind(column_observations, find_max(phits_pmisses))
+              rbind(column_observations, find_max(running_enrichment_score))
           } else {
             column_observations <- rbind(column_observations, NA)
           }
@@ -263,8 +263,8 @@ analyze_pathways <-
         genes_in_pathway$phits <- get_phits(genes_in_pathway$Effect)
 
         # get phits-pmisses
-        genes_in_pathway$phits_pmisses <-
-          get_phits_pmisses(genes_in_pathway$phits, genes_in_pathway$pmisses)
+        genes_in_pathway$running_enrichment_score <-
+          get_running_enrichment_score(genes_in_pathway$phits, genes_in_pathway$pmisses)
 
         # append rows with NESrank
         genes_in_pathway <-
@@ -281,7 +281,7 @@ analyze_pathways <-
           .data$pathway_number,
           .data$gene_id,
           .data$rank,
-          .data$phits_pmisses
+          .data$running_enrichment_score
         ),
       pathways %>%
         dplyr::select(.data$pathway_id, .data$pathway_name) %>%

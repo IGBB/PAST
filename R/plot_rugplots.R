@@ -22,7 +22,7 @@ plot_pathways <-
     dir.create(file.path(output_directory), showWarnings = FALSE)
 
     rugplots_data <- rugplots_data %>%
-      dplyr::arrange(.data$NESrank)
+      dplyr::arrange(.data$pathway_number)
     write.table(
       rugplots_data,
       file = paste0(output_directory, "/", mode, ".full.txt"),
@@ -33,7 +33,7 @@ plot_pathways <-
 
     if (filter_type == "rank") {
       rugplots_data <- rugplots_data %>%
-        dplyr::filter(.data$NESrank <= filter_parameter)
+        dplyr::filter(.data$pathway_number <= filter_parameter)
     } else if (filter_type == "pvalue") {
       rugplots_data <- rugplots_data %>%
         dplyr::filter(.data$pvalue <= filter_parameter)
@@ -53,19 +53,19 @@ plot_pathways <-
       row.names = FALSE,
       quote = FALSE
     )
-    rugplots_split <- split(rugplots_data, rugplots_data$NESrank)
+    rugplots_split <- split(rugplots_data, rugplots_data$pathway_number)
 
     for (rank in names(rugplots_split)) {
       temp_data <- rugplots_split[[rank]]
       title <-
         paste0(unique(as.character(temp_data$pathway_id)), " - ", unique(as.character(temp_data$pathway_name)))
       intercept <- temp_data %>%
-        dplyr::arrange(desc(.data$phits_pmisses)) %>%
+        dplyr::arrange(desc(.data$running_enrichment_score)) %>%
         dplyr::select(.data$rank)
       intercept <- intercept[, 1][1]
       rugplot <-
         ggplot(temp_data,
-               aes(x = temp_data$rank, y = temp_data$phits_pmisses)) +
+               aes(x = temp_data$rank, y = temp_data$running_enrichment_score)) +
         geom_line(stat = "identity") +
         geom_rug(sides = "t", position = "jitter") +
         geom_vline(xintercept = intercept,
