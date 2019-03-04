@@ -9,7 +9,7 @@
 #' @import dplyr
 #' @import ggplot2
 #' @export
-#'
+#' @return Does not return a value
 #' @examples
 #' data(rugplots_data)
 #' plot_pathways(rugplots_data, "pvalue", "0.03", "decreasing", "results")

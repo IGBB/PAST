@@ -6,6 +6,9 @@
 \usage{
 run_shiny()
 }
+\value{
+Does not return a value
+}
 \description{
 Run Shiny App
 }

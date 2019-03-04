@@ -18,6 +18,9 @@ plot_pathways(rugplots_data, filter_type, filter_parameter, mode,
 
 \item{output_directory}{An existing directory to save results in}
 }
+\value{
+Does not return a value
+}
 \description{
 Plot Pathways
 }

@@ -3,7 +3,6 @@
 #' @param gff_file The path to the GFF file
 #' @importFrom rlang .data
 #' @import dplyr
-#' @export
 #' @return A dataframe containing the relevant GFF data - chromosome, gene name, start and stop locations
 read_gff <- function(gff_file) {
   gff <- read.table(
@@ -40,7 +39,6 @@ read_gff <- function(gff_file) {
 #' @param r_squared_cutoff The R^2 value to check against
 #' @importFrom rlang .data
 #' @import dplyr
-#' @export
 #' @return Either the first unlinked SNP or a set of linked SNPs
 parse_temp <- function(data, r_squared_cutoff) {
   data <- data %>% dplyr::arrange(.data$Dist_bp)
@@ -61,7 +59,6 @@ parse_temp <- function(data, r_squared_cutoff) {
 #' @param r_squared_cutoff The R^2 value to check against when counting SNPs
 #' @importFrom rlang .data
 #' @import dplyr
-#' @export
 #' @return A single SNP representing the whole block
 parse_chunk <- function(block, r_squared_cutoff) {
   block <- block %>% dplyr::mutate(linked_snp_count = nrow(block))
@@ -115,7 +112,6 @@ parse_chunk <- function(block, r_squared_cutoff) {
 #' @param untagged_genes A chunk of untagged genes
 #' @importFrom rlang .data
 #' @import dplyr
-#' @export
 #' @return A single SNP representing all SNPS assigned
 #' to a gene
 select_gene_from_block <- function(untagged_genes) {
@@ -165,7 +161,6 @@ globalVariables("block")
 #' @param window The search window around the SNPs
 #' @importFrom rlang .data
 #' @import dplyr
-#' @export
 #' @return SNPs labeled with gene names
 find_genes <- function(gff, snp_df, window) {
   no_linked <- snp_df %>%
@@ -357,7 +352,6 @@ find_genes <- function(gff, snp_df, window) {
 #' LD <- parse_LD(demo_linkage_disequilibrium_file)
 #' demo_genes_file = system.file("extdata", "genes.gff.xz", package = "PAST", mustWork = TRUE)
 #' genes <-parse_SNP(merged_data, LD, demo_genes_file, 1000, 0.8, 2)
-
 parse_SNP <-
   function(all_data,
            LD,
@@ -377,7 +371,7 @@ parse_SNP <-
     all_genes <- NULL
 
     # UP/DOWNSTREAM LOOP
-    for (i in 1:2) {
+    for (i in seq_along(c(1, 2))) {
       print(ifelse(i == 1, "upstream", "dowstream"))
 
       # BEGIN PROCESSING BY CHROMOSOMES LOOP
@@ -489,7 +483,7 @@ parse_SNP <-
           snp_list <-
             split(temp_data,
                   rep(
-                    1:split,
+                    seq(split),
                     length.out = nrow(temp_data),
                     each = ceiling(nrow(temp_data) / split)
                   ))
