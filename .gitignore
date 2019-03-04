@@ -4,5 +4,5 @@ doc
 .Rbuildignore
 .Rhistory
 .Rproj.user/
-past.Rproj
+PAST.Rproj
 .Rproj.user

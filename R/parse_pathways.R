@@ -80,8 +80,9 @@ analyze_pathways <-
     # sample to create 1000 random distributions
     effects <- genes %>% dplyr::select(.data$Gene, .data$Effect)
     effects <-
-      cbind(effects, sapply(1:sample_size, function(i)
-        sample(effects$Effect)))
+      cbind(effects, vapply(seq(sample_size),
+                            function(i) sample(effects$Effect),
+                            FUN.VALUE = double(nrow(effects))))
 
     pathways_unique <- unique(select(pathways, .data$pathway_id))
     pathways_unique[] <- lapply(pathways_unique, as.character)
@@ -156,7 +157,7 @@ analyze_pathways <-
 
     pathways_unique <- cbind(pathways_unique, column_observations)
     colnames(pathways_unique) <-
-      c("Pathway", "ES_Observed", 1:sample_size)
+      c("Pathway", "ES_Observed", seq(sample_size))
     colnames(pathways_unique)[3:(sample_size + 2)] <-
       paste0("ES", colnames(pathways_unique)[3:(sample_size + 2)])
     pathways_unique <- pathways_unique %>%
@@ -171,7 +172,7 @@ analyze_pathways <-
       dplyr::mutate(
         NES_Observed = (.data$ES_Observed - .data$permutation_mean) / .data$permutation_standard_deviation
       )
-    for (i in 1:sample_size) {
+    for (i in seq(sample_size)) {
       pathways_unique[i + 2] <-
         (pathways_unique[i + 2] - pathways_unique[sample_size + 3]) / pathways_unique[sample_size + 4]
     }
@@ -180,7 +181,7 @@ analyze_pathways <-
 
     FDR_denominators <-
       rep(NA, length(pathways_unique$NES_Observed))
-    for (i in 1:length(pathways_unique$NES_Observed)) {
+    for (i in seq(length(pathways_unique$NES_Observed))) {
       FDR_denominators[i] <-
         (sum(
           pathways_unique$NES_Observed >= pathways_unique$NES_Observed[i]
@@ -188,7 +189,7 @@ analyze_pathways <-
     }
 
     FDR_numerators <- rep(NA, length(pathways_unique$NES_Observed))
-    for (i in 1:length(pathways_unique$NES_Observed)) {
+    for (i in seq(length(pathways_unique$NES_Observed))) {
       FDR_numerators[i] <-
         (sum(pathways_unique[, 3:(sample_size + 2)] >= pathways_unique$NES_Observed[i])) / (ncol(pathways_unique[3:(sample_size + 2)]) * length(pathways_unique$NES_Observed))
     }
