@@ -372,7 +372,7 @@ parse_SNP <-
 
     # UP/DOWNSTREAM LOOP
     for (i in seq_along(c(1, 2))) {
-      print(ifelse(i == 1, "upstream", "dowstream"))
+      # print(ifelse(i == 1, "upstream", "dowstream"))
 
       # BEGIN PROCESSING BY CHROMOSOMES LOOP
       for (chromosome in names(LD)) {
@@ -408,7 +408,7 @@ parse_SNP <-
           }
           temp_data_list <- split(temp_data, temp_data$Position1)
 
-          print("Parsing unlinked...")
+          # print("Parsing unlinked...")
           temp_data <-
             foreach(
               data = temp_data_list,
@@ -421,7 +421,7 @@ parse_SNP <-
           chr_data <-
             dplyr::filter(all_data, .data$Chr == as.integer(chromosome))
 
-          print("Getting effects...")
+          # print("Getting effects...")
           # look up p-value and effect data for SNP1
           temp_data <-
             merge(temp_data, chr_data, by.x = "Marker1", by.y = "Marker") %>%
@@ -469,7 +469,7 @@ parse_SNP <-
           temp_data_list <-
             split(temp_data, paste(temp_data$Position1, index))
 
-          print("Parsing chunks...")
+          # print("Parsing chunks...")
           temp_data <-
             foreach(
               data = temp_data_list,
@@ -492,7 +492,7 @@ parse_SNP <-
           gff <- dplyr::filter(full_gff, .data$chr == chromosome)
 
           # get genes in parallel
-          print("Finding genes...")
+          # print("Finding genes...")
           chr_genes <-
             foreach(
               snp_chunk = snp_list,
@@ -516,7 +516,9 @@ parse_SNP <-
       ) %dopar% {
         select_gene_from_block(block)
       }
-
+    
+    stopCluster(cl)
+    
     tagged_genes %>%
       dplyr::mutate(Chromosome = .data$Locus1, Gene = .data$name) %>%
       dplyr::select(.data$Chromosome,
