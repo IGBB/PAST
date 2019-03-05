@@ -179,30 +179,14 @@ analyze_pathways <-
     pathways_unique <- pathways_unique %>%
       dplyr::mutate(pvalue = 1 - pnorm(.data$NES_Observed))
 
-    FDR_denominators <-
-      rep(NA, length(pathways_unique$NES_Observed))
-    for (i in seq(length(pathways_unique$NES_Observed))) {
-      FDR_denominators[i] <-
-        (sum(
-          pathways_unique$NES_Observed >= pathways_unique$NES_Observed[i]
-        )) / length(pathways_unique$NES_Observed)
-    }
 
-    FDR_numerators <- rep(NA, length(pathways_unique$NES_Observed))
-    for (i in seq(length(pathways_unique$NES_Observed))) {
-      FDR_numerators[i] <-
-        (sum(pathways_unique[, 3:(sample_size + 2)] >= pathways_unique$NES_Observed[i])) / (ncol(pathways_unique[3:(sample_size + 2)]) * length(pathways_unique$NES_Observed))
-    }
 
-    pathways_unique <-
-      dplyr::mutate(pathways_unique, FDR = FDR_numerators / FDR_denominators) %>%
-      dplyr::arrange(.data$pvalue)
+    pathways_unique <-dplyr::arrange(pathways_unique, .data$pvalue)
     pathways_unique <- pathways_unique %>%
       dplyr::select(.data$Pathway,
                     .data$ES_Observed,
                     .data$NES_Observed,
-                    .data$pvalue,
-                    .data$FDR) %>%
+                    .data$pvalue) %>%
       dplyr::mutate(qvalue = qvalue(
         pathways_unique$pvalue,
         lambda = 0,
@@ -212,7 +196,6 @@ analyze_pathways <-
     pathways_significant <- pathways_unique %>%
       dplyr::select(.data$Pathway,
                     .data$NES_Observed,
-                    .data$FDR,
                     .data$pvalue,
                     .data$qvalue) %>%
       dplyr::mutate(pathway_number = row_number(), NESrank = NULL)
@@ -295,7 +278,6 @@ analyze_pathways <-
         pathways_unique,
         .data$Pathway,
         .data$pvalue,
-        .data$FDR,
         .data$qvalue
       ),
       by.x = "pathway_id",

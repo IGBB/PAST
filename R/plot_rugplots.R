@@ -37,9 +37,6 @@ plot_pathways <-
     } else if (filter_type == "pvalue") {
       rugplots_data <- rugplots_data %>%
         dplyr::filter(.data$pvalue <= filter_parameter)
-    } else if (filter_type == "FDR") {
-      rugplots_data <- rugplots_data %>%
-        dplyr::filter(.data$qvalue <= filter_parameter)
     } else {
       print("Incorrect filtering type. Filtering at p-value <= 0.05")
       rugplots_data <- rugplots_data %>%
