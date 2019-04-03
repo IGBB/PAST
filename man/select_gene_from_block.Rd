@@ -11,7 +11,7 @@ select_gene_from_block(untagged_genes)
 \item{untagged_genes}{A chunk of untagged genes}
 }
 \value{
-A single SNP representing all SNPS assigned
+A single SNP-gene assignment representing all SNPS assigned to the same gene
 to a gene
 }
 \description{

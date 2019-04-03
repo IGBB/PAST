@@ -112,7 +112,7 @@ parse_chunk <- function(block, r_squared_cutoff) {
 #' @param untagged_genes A chunk of untagged genes
 #' @importFrom rlang .data
 #' @import dplyr
-#' @return A single SNP representing all SNPS assigned
+#' @return A single SNP-gene assignment representing all SNPS assigned to the same gene
 #' to a gene
 select_gene_from_block <- function(untagged_genes) {
   neg_genes <- untagged_genes %>%

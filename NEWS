@@ -1,2 +1,12 @@
-Changes in version 0.99.0 (2018-02-28)
+Changes in version 0.99.0 (2019-02-28)
 + Submitted to Bioconductor
+
+Changes in version 0.99.1 (2019-02-28)
++ Closed connections after finishing with them
+
+Changes in version 0.99.2 (2019-02-28)
++ Removed extra code
+
+Changes in version 0.99.3 (2019-04-03)
++ Corrected NEWS
++ added vignette description
