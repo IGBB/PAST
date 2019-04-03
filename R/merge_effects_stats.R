@@ -47,7 +47,6 @@ merge_data <- function(association_file, effects_file) {
   # Merge stats and effects and return
   all_data <- merge(stats, effects, by = "Marker") %>%
     dplyr::mutate(
-      .data,
       Trait = .data$"Trait.x",
       Trait.x = NULL,
       Trait.y = NULL,
@@ -68,4 +67,5 @@ merge_data <- function(association_file, effects_file) {
       # .data$Obs.y,
       .data$Trait
     )
+  all_data
 }
