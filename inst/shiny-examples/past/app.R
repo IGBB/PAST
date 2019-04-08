@@ -1,7 +1,13 @@
+library(shiny)
+library(shinydashboard)
+library(gridExtra)
+library(dplyr)
+library(ggplot2)
+
 ui <- dashboardPage(
   title = "PAST",
-  shinydashboard::dashboardHeader(title = textOutput("title")),
-  shinydashboard::dashboardSidebar(
+  dashboardHeader(title = textOutput("title")),
+  dashboardSidebar(
     sidebarMenu(
       textInput("title", "Analysis Title", value = "New Analysis"),
       selectInput(
@@ -13,11 +19,17 @@ ui <- dashboardPage(
       menuItemOutput("menuitem"),
       menuItem(
         "Plot",
+        selectInput(
+          "filter_type",
+          "Filter Parameter:",
+          choices = c("p-value", "q-value"),
+          selected = "p-value"
+        ),
         sliderInput(
           "significance_cutoff",
           "Pathway Signficance Filter",
           min = 0,
-          max = 0.2,
+          max = 0.3,
           value = 0.05,
           step = 0.01
         )
@@ -92,6 +104,7 @@ server <- function(input, output) {
       paste(input$title, ".zip", sep = "")
     },
     content = function(filename) {
+      filter_type <- input$filter_type
       significance_cutoff <- input$significance_cutoff
       fs <- c()
       setwd(tempdir())
@@ -101,8 +114,13 @@ server <- function(input, output) {
         pathways <- load_pathways_from_file()
       }
       write.table(pathways, paste0(input$title, ".pathways.tsv"), sep = "\t")
+      if (filter_type == "p-value") {
+        filtered_pathways <- dplyr::filter(pathways, pvalue < significance_cutoff)
+      } else {
+        filtered_pathways <- dplyr::filter(pathways, qvalue < significance_cutoff)
+      }
       write.table(
-        pathways %>% dplyr::filter(data$pvalue < significance_cutoff),
+        filtered_pathways,
         paste0(input$title, ".pathways.filtered.tsv"),
         sep = "\t"
       )
@@ -114,9 +132,12 @@ server <- function(input, output) {
         )
       if (is.null(pathways))
         return(NULL)
-      rugplots_data <-
-        pathways %>% dplyr::arrange(.data$pathway_number) %>%
-        dplyr::filter(.data$pvalue < significance_cutoff)
+      rugplots_data <- pathways %>% dplyr::arrange(.data$pathway_number)
+      if (filter_type == "p-value") {
+        rugplots_data <- dplyr::filter(rugplots_data, pvalue < significance_cutoff)
+      } else {
+        rugplots_data <- dplyr::filter(rugplots_data, qvalue < significance_cutoff)
+      }
       rugplots_split <- split(rugplots_data, rugplots_data$pathway_number)
       for (rank in names(rugplots_split)) {
         temp_data <- rugplots_split[[rank]]
@@ -233,13 +254,22 @@ server <- function(input, output) {
     } else {
       pathways <- load_pathways_from_file()
     }
+    filter_type <- input$filter_type
     significance_cutoff <- input$significance_cutoff
     if (is.null(pathways))
       return(NULL)
     pathways <- pathways %>%
       dplyr::select(.data$pathway_id, .data$pvalue, .data$qvalue) %>%
-      unique() %>% dplyr::filter(.data$pvalue < significance_cutoff)
-    datatable(pathways,
+      unique()
+    print(pathways)
+    if (filter_type == "p-value") {
+      pathways <- dplyr::filter(pathways, pvalue < significance_cutoff)
+    } else {
+      pathways <- dplyr::filter(pathways, qvalue < significance_cutoff)
+    }
+
+    print(pathways)
+    DT::datatable(pathways,
               rownames = FALSE,
               options = list(paging = FALSE))
   })
@@ -249,12 +279,18 @@ server <- function(input, output) {
     } else {
       pathways <- load_pathways_from_file()
     }
+    filter_type <- input$filter_type
     significance_cutoff <- input$significance_cutoff
     if (is.null(pathways))
       return(NULL)
     rugplots_data <- pathways %>%
-      dplyr::arrange(.data$pathway_number) %>%
-      dplyr::filter(.data$pvalue < significance_cutoff)
+      dplyr::arrange(.data$pathway_number)
+    if (filter_type == "p-value") {
+      rugplots_data <- dplyr::filter(rugplots_data, pvalue < significance_cutoff)
+    } else {
+      rugplots_data <- dplyr::filter(rugplots_data, qvalue < significance_cutoff)
+    }
+
     rugplots_split <-
       split(rugplots_data, rugplots_data$pathway_number)
     p <- list()
@@ -312,4 +348,5 @@ server <- function(input, output) {
     return(nrow(pathways) / columns * 200)
   }))
 }
+
 shinyApp(ui = ui, server = server)
