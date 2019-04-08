@@ -40,17 +40,21 @@ read_gff <- function(gff_file) {
 #' @importFrom rlang .data
 #' @import dplyr
 #' @return Either the first unlinked SNP or a set of linked SNPs
-parse_temp <- function(data, r_squared_cutoff) {
-  data <- data %>% dplyr::arrange(.data$Dist_bp)
-  linked <- data %>% dplyr::filter(.data$R.2 >= r_squared_cutoff)
-  unlinked <- data %>% dplyr::filter(.data$R.2 < r_squared_cutoff)
+parse_temp <- function(chunk, r_squared_cutoff) {
+  return_chunk = NULL
+  for (i in seq_along(chunk)){
+    data <- chunk[[i]]
+    data <- data %>% dplyr::arrange(.data$Dist_bp)
+    linked <- data %>% dplyr::filter(.data$R.2 >= r_squared_cutoff)
+    unlinked <- data %>% dplyr::filter(.data$R.2 < r_squared_cutoff)
 
-  if (nrow(unlinked) == nrow(data)) {
-    return <- unlinked[1, ]
-  } else {
-    return <- linked %>% filter(.data$R.2 >= r_squared_cutoff)
+    if (nrow(unlinked) == nrow(data)) {
+      return_chunk <- rbind(return_chunk, unlinked[1, ])
+    } else {
+      return_chunk <- rbind(return_chunk, linked %>% filter(.data$R.2 >= r_squared_cutoff))
+    }
   }
-  return
+  return_chunk
 }
 
 #' Parse blocked SNPs into a single representative SNP
@@ -407,11 +411,12 @@ parse_SNP <-
               dplyr::arrange(.data$Site1)
           }
           temp_data_list <- split(temp_data, temp_data$Position1)
+          temp_data_list_split <- split(temp_data_list, ceiling(seq_along(temp_data_list)/num_cores))
 
           # print("Parsing unlinked...")
           temp_data <-
             foreach(
-              data = temp_data_list,
+              data = temp_data_list_split,
               .combine = rbind,
               .packages = c("dplyr", "PAST")
             ) %dopar% {
@@ -516,9 +521,9 @@ parse_SNP <-
       ) %dopar% {
         select_gene_from_block(block)
       }
-    
+
     stopCluster(cl)
-    
+
     tagged_genes %>%
       dplyr::mutate(Chromosome = .data$Locus1, Gene = .data$name) %>%
       dplyr::select(.data$Chromosome,

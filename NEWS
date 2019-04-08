@@ -10,3 +10,7 @@ Changes in version 0.99.2 (2019-02-28)
 Changes in version 0.99.3 (2019-04-03)
 + Corrected NEWS
 + added vignette description
+
+Changes in version 0.99.4 (2019-04-08)
++ updated vignette
++ added filtering options to R Shiny app
