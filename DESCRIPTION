@@ -1,7 +1,7 @@
 Package: PAST
 Type: Package
 Title: Pathway Association Study Tool (PAST)
-Version: 0.99.4
+Version: 0.99.5
 Authors@R: c(person("Thrash", "Adam", email = "thrash@igbb.msstate.edu",
   role = c("aut", "cre")), person("DeOrnellis", "Mason", role = c("aut")))
 Author: Mason DeOrnellis, Adam Thrash
@@ -9,7 +9,7 @@ Maintainer: Adam Thrash <thrash@igbb.msstate.edu>
 Description: PAST takes TASSEL-formatted GWAS output and returns signficant pathways. These analyses can be run through an R script or through an included Shiny app.
 License: GPL (>=3)
 Encoding: UTF-8
-Depends: R (>= 3.5)
+Depends: R (>= 3.6)
 Imports: stats, utils, stringr, dplyr, rlang, iterators, parallel, foreach, doParallel, qvalue, ggplot2, shiny, shinydashboard, gridExtra, DT
 Suggests: 
     knitr,

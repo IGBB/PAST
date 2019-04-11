@@ -4,10 +4,10 @@
 \alias{parse_temp}
 \title{Parse Chunks of Data for Significant SNPs}
 \usage{
-parse_temp(data, r_squared_cutoff)
+parse_temp(chunk, r_squared_cutoff)
 }
 \arguments{
-\item{data}{A chunk of data to be processed}
+\item{chunk}{A chunk of data to be processed}
 
 \item{r_squared_cutoff}{The R^2 value to check against}
 }
