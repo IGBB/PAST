@@ -35,7 +35,7 @@ read_gff <- function(gff_file) {
 
 #' Parse Chunks of Data for Significant SNPs
 #'
-#' @param data A chunk of data to be processed
+#' @param chunk A chunk of data to be processed
 #' @param r_squared_cutoff The R^2 value to check against
 #' @importFrom rlang .data
 #' @import dplyr
