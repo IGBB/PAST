@@ -1,7 +1,7 @@
 Package: PAST
 Type: Package
 Title: Pathway Association Study Tool (PAST)
-Version: 0.99.9
+Version: 0.99.10
 Authors@R: c(person("Thrash", "Adam", email = "thrash@igbb.msstate.edu",
   role = c("aut", "cre")), person("DeOrnellis", "Mason", role = c("aut")))
 Description: PAST takes TASSEL-formatted GWAS output and returns signficant pathways.
