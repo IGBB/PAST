@@ -4,12 +4,14 @@
 \alias{merge_data}
 \title{Merge Data}
 \usage{
-merge_data(association_file, effects_file)
+merge_data(association_file, effects_file, type)
 }
 \arguments{
 \item{association_file}{The association file}
 
 \item{effects_file}{The effects file}
+
+\item{type}{The type of analysis from TASSEL (mlm or glm)}
 }
 \value{
 The association data and the effects data merged into a dataframe
@@ -23,5 +25,6 @@ demo_association_file = system.file("extdata",
 "association.txt.xz", package = "PAST", mustWork = TRUE)
 demo_effects_file = system.file("extdata",
 "effects.txt.xz", package = "PAST", mustWork = TRUE)
-merged_data <- merge_data(demo_association_file, demo_effects_file)
+type = "glm"
+merged_data <- merge_data(demo_association_file, demo_effects_file, type)
 }
