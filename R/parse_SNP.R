@@ -350,7 +350,8 @@ find_genes <- function(gff, snp_df, window) {
 #' "association.txt.xz", package = "PAST", mustWork = TRUE)
 #' demo_effects_file = system.file("extdata",
 #' "effects.txt.xz", package = "PAST", mustWork = TRUE)
-#' merged_data <- merge_data(demo_association_file, demo_effects_file)
+#' type = "mlm"
+#' merged_data <- merge_data(demo_association_file, demo_effects_file, type)
 #' demo_linkage_disequilibrium_file = system.file("extdata",
 #' "LD.txt.xz", package = "PAST", mustWork = TRUE)
 #' LD <- parse_LD(demo_linkage_disequilibrium_file)

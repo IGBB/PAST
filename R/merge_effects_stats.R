@@ -14,7 +14,7 @@
 #' "association.txt.xz", package = "PAST", mustWork = TRUE)
 #' demo_effects_file = system.file("extdata",
 #' "effects.txt.xz", package = "PAST", mustWork = TRUE)
-#' type = "glm"
+#' type = "mlm"
 #' merged_data <- merge_data(demo_association_file, demo_effects_file, type)
 merge_data <- function(association_file, effects_file, type) {
   stats <- read.table(association_file, header = TRUE, sep = "\t")
@@ -31,12 +31,12 @@ merge_data <- function(association_file, effects_file, type) {
     stats %>% dplyr::filter(!(.data$Marker %in% non_biallelic$Marker))
 
   if (type == "mlm") {
-    stats <- stats %>% mutate(Chr = Locus, Pos = Site)
+    stats <- stats %>% dplyr::mutate(Chr = .data$Locus, Pos = .data$Site)
   } else if (type == "glm") {
-    stats <- stats %>% mutate(marker_R2 = marker_Rsq, F = marker_F)
-    effects <- effects %>% mutate(Effect = Estimate)
+    stats <- stats %>% dplyr::mutate(marker_R2 = .data$marker_Rsq, F = .data$marker_F)
+    effects <- effects %>% dplyr::mutate(Effect = .data$Estimate)
   } else if (type == "other"){
-    next()
+    #
   } else {
     print("Type not specified correctly. Type must be \"mlm\" or \"glm\".")
     return()

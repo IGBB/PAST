@@ -25,6 +25,6 @@ demo_association_file = system.file("extdata",
 "association.txt.xz", package = "PAST", mustWork = TRUE)
 demo_effects_file = system.file("extdata",
 "effects.txt.xz", package = "PAST", mustWork = TRUE)
-type = "glm"
+type = "mlm"
 merged_data <- merge_data(demo_association_file, demo_effects_file, type)
 }
