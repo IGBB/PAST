@@ -14,8 +14,8 @@
 #' "association.txt.xz", package = "PAST", mustWork = TRUE)
 #' demo_effects_file = system.file("extdata",
 #' "effects.txt.xz", package = "PAST", mustWork = TRUE)
-#' gwas_data <- read_GWAS_data(demo_association_file, demo_effects_file)
-read_GWAS_data <- function(association_file,
+#' gwas_data <- load_GWAS_data(demo_association_file, demo_effects_file)
+load_GWAS_data <- function(association_file,
                        effects_file,
                        stats_columns = c("Trait",
                                          "Marker",
