@@ -26,14 +26,15 @@ A dataframe of genes from the SNP data
 Parse SNP data and return genes
 }
 \examples{
-demo_association_file = system.file("extdata",
-"association.txt.xz", package = "PAST", mustWork = TRUE)
-demo_effects_file = system.file("extdata",
-"effects.txt.xz", package = "PAST", mustWork = TRUE)
+demo_association_file = system.file("extdata", "association.txt.xz",
+  package = "PAST", mustWork = TRUE)
+demo_effects_file = system.file("extdata", "effects.txt.xz",
+  package = "PAST", mustWork = TRUE)
 gwas_data <- load_GWAS_data(demo_association_file, demo_effects_file)
-demo_linkage_disequilibrium_file = system.file("extdata",
-"LD.txt.xz", package = "PAST", mustWork = TRUE)
-LD <- parse_LD(demo_linkage_disequilibrium_file)
-demo_genes_file = system.file("extdata", "genes.gff.xz", package = "PAST", mustWork = TRUE)
+demo_linkage_disequilibrium_file = system.file("extdata","LD.txt.xz",
+package = "PAST", mustWork = TRUE)
+LD <- load_LD(demo_linkage_disequilibrium_file)
+demo_genes_file = system.file("extdata", "genes.gff.xz",
+  package = "PAST", mustWork = TRUE)
 genes <-parse_SNP(gwas_data, LD, demo_genes_file, 1000, 0.8, 2)
 }

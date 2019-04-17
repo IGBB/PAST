@@ -2,7 +2,7 @@
 
 export(analyze_pathways)
 export(load_GWAS_data)
-export(parse_LD)
+export(load_LD)
 export(parse_SNP)
 export(plot_pathways)
 import(doParallel)

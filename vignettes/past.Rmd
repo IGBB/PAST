@@ -48,7 +48,7 @@ demo_genes_file = system.file("extdata", "genes.gff.xz", package = "PAST", mustW
 demo_pathways_file = system.file("extdata", "pathways.txt.xz", package = "PAST", mustWork = TRUE)
 
 gwas_data <- load_GWAS_data(demo_association_file, demo_effects_file)
-LD <- parse_LD(demo_linkage_disequilibrium_file) # parse_LD can take gzip-compressed files or plain text
+LD <- load_LD(demo_linkage_disequilibrium_file)
 genes <-parse_SNP(gwas_data, LD, demo_genes_file, 1000, 0.8, 2)
 rugplots_data <- analyze_pathways(genes, demo_pathways_file, 5, "increasing", 1000, 2)
 plot_pathways(rugplots_data, "pvalue", 0.02, "increasing", tempdir())
