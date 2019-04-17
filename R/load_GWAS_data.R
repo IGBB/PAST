@@ -2,7 +2,10 @@
 #'
 #' @param association_file The association file
 #' @param effects_file  The effects file
-#' @param type The type of analysis from TASSEL (mlm or glm)
+#' @param association_columns The names of the columns in your association data
+#'   for Trait, Marker, Chromosome, Site, F, p, and marker_Rsquared
+#' @param effects_columns The names of the columns in your effects data for
+#'   Trait, Marker, Chromosome, Site, and effect
 #' @return The association data and the effects data merged into a dataframe
 #'   with one row for each SNP
 #' @export
@@ -17,7 +20,7 @@
 #' gwas_data <- load_GWAS_data(demo_association_file, demo_effects_file)
 load_GWAS_data <- function(association_file,
                        effects_file,
-                       stats_columns = c("Trait",
+                       association_columns = c("Trait",
                                          "Marker",
                                          "Locus",
                                          "Site",
@@ -32,12 +35,12 @@ load_GWAS_data <- function(association_file,
 
     stats <- read.table(association_file, header = TRUE, sep = "\t") %>%
       dplyr::mutate(.data,
-                  Trait = !!as.name(stats_columns[1]),
-                  Marker = !!as.name(stats_columns[2]),
-                  Chr = !!as.name(stats_columns[3]),
-                  Pos = !!as.name(stats_columns[4]),
-                  p = !!as.name(stats_columns[5]),
-                  marker_R2 = !!as.name(stats_columns[6])) %>%
+                  Trait = !!as.name(association_columns[1]),
+                  Marker = !!as.name(association_columns[2]),
+                  Chr = !!as.name(association_columns[3]),
+                  Pos = !!as.name(association_columns[4]),
+                  p = !!as.name(association_columns[5]),
+                  marker_R2 = !!as.name(association_columns[6])) %>%
       dplyr::select(.data$Marker,
                   .data$Trait,
                   .data$Chr,
