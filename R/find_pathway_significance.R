@@ -39,13 +39,16 @@ find_max <- function(running_enrichment_score) {
 # created by foreach loops
 globalVariables("pathway")
 
-#' Analyze Pathways
+#' Find Pathway Significance
 #'
-#' @param genes Genes from parse_SNP()
-#' @param pathways_file A file containing the pathway IDs, their names, and the genes in the pathway
-#' @param gene_number_cutoff A cut-off for the minimum number of genes in a pathway
+#' @param genes Genes from assign_SNPs_to_genes()
+#' @param pathways_file A file containing the pathway IDs, their names, and the
+#'   genes in the pathway
+#' @param gene_number_cutoff A cut-off for the minimum number of genes in a
+#'   pathway
 #' @param mode increasing/decreasing
-#' @param sample_size How many times to sample the effects data during random sampling
+#' @param sample_size How many times to sample the effects data during random
+#'   sampling
 #' @param num_cores The number of cores to use in parallelizing PAST
 #' @importFrom rlang .data
 #' @importFrom stats pnorm
@@ -60,15 +63,17 @@ globalVariables("pathway")
 #' @export
 #'
 #' @examples
-#' demo_pathways_file = system.file("extdata", "pathways.txt.xz", package = "PAST", mustWork = TRUE)
+#' demo_pathways_file = system.file("extdata", "pathways.txt.xz",
+#'   package = "PAST", mustWork = TRUE)
 #' data(genes)
-#' rugplots_data_susceptible <- analyze_pathways(genes, demo_pathways_file, 5, "increasing", 1000, 2)
-analyze_pathways <-
+#' rugplots_data <- find_pathway_signficance(genes, demo_pathways_file, 5,
+#'   "increasing", 1000, 2)
+find_pathway_significance <-
   function(genes,
            pathways_file,
-           gene_number_cutoff,
+           gene_number_cutoff = 5,
            mode,
-           sample_size,
+           sample_size = 1000,
            num_cores) {
     # load pathways
     pathways <-
@@ -78,10 +83,10 @@ analyze_pathways <-
                  quote = "")
 
     # sample to create 1000 random distributions
-    effects <- genes %>% dplyr::select(.data$Gene, .data$Effect)
+    effects <- genes %>% dplyr::select(.data$name, .data$effect)
     effects <-
       cbind(effects, vapply(seq(sample_size),
-                            function(i) sample(effects$Effect),
+                            function(i) sample(effects$effect),
                             FUN.VALUE = double(nrow(effects))))
 
     pathways_unique <- unique(select(pathways, .data$pathway_id))
@@ -98,23 +103,23 @@ analyze_pathways <-
       ) %dopar% {
         temp_data <-
           data.frame(matrix("NA", ncol = 2, nrow = nrow(effects)))
-        colnames(temp_data) <- c("Gene", "Effect")
-        temp_data$Effect <- effects[, i]
-        temp_data$Gene <- effects[, 1]
+        colnames(temp_data) <- c("name", "effect")
+        temp_data$effect <- effects[, i]
+        temp_data$gene <- effects[, 1]
 
         if (mode == "decreasing") {
           temp_data <- temp_data %>%
-            dplyr::arrange(.data$Effect) %>%
+            dplyr::arrange(.data$effect) %>%
             dplyr::mutate(rank = row_number())
         } else if (mode == "increasing") {
           temp_data <- temp_data %>%
-            dplyr::arrange(desc(.data$Effect)) %>%
+            dplyr::arrange(desc(.data$effect)) %>%
             dplyr::mutate(rank = row_number())
         } else {
           stop("Incorrect mode.")
         }
 
-        column_observations <- data.frame()
+        column_observation <- data.frame()
 
         foreach(pathway = iter(pathways_unique$pathway_id, by = "row")) %do% {
           genes_in_pathway <-
@@ -125,7 +130,7 @@ analyze_pathways <-
             merge(genes_in_pathway,
                   temp_data,
                   by.x = "gene_id",
-                  by.y = "Gene") %>%
+                  by.y = "gene") %>%
             dplyr::arrange(.data$rank) %>% unique()
 
           ## check cutoff
@@ -134,23 +139,22 @@ analyze_pathways <-
             factors <- get_factors(genes_in_pathway$rank)
 
             # get pmisses
-            pmisses <-
-              get_pmisses(temp_data, genes_in_pathway, factors)
+            pmisses <- get_pmisses(temp_data, genes_in_pathway, factors)
 
             # get phits
-            phits <- get_phits(genes_in_pathway$Effect)
+            phits <- get_phits(genes_in_pathway$effect)
 
             # get phits-pmisses
             running_enrichment_score <- get_running_enrichment_score(phits, pmisses)
             find_max(running_enrichment_score)
             # store max phit_pmisses
-            column_observations <-
-              rbind(column_observations, find_max(running_enrichment_score))
+            column_observation <-
+              rbind(column_observation, find_max(running_enrichment_score))
           } else {
-            column_observations <- rbind(column_observations, NA)
+            column_observation <- rbind(column_observation, NA)
           }
         }
-        column_observations
+        column_observation
       }
 
     stopCluster(cl)
@@ -176,10 +180,14 @@ analyze_pathways <-
       pathways_unique[i + 2] <-
         (pathways_unique[i + 2] - pathways_unique[sample_size + 3]) / pathways_unique[sample_size + 4]
     }
-    pathways_unique <- pathways_unique %>%
-      dplyr::mutate(pvalue = 1 - pnorm(.data$NES_Observed))
 
-
+    if (mode == "increasing") {
+      pathways_unique <- pathways_unique %>%
+        dplyr::mutate(pvalue = 1-pnorm(.data$NES_Observed))
+    } else if (mode == "decreasing") {
+      pathways_unique <- pathways_unique %>%
+        dplyr::mutate(pvalue = pnorm(.data$NES_Observed))
+    }
 
     pathways_unique <-dplyr::arrange(pathways_unique, .data$pvalue)
     pathways_unique <- pathways_unique %>%
