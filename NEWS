@@ -44,3 +44,6 @@ Changes in version 0.99.14 (2019-04-16)
 
 Changes in version 0.99.15 (2019-04-17)
 + renamed LD function and changed added column name specification
+
+Changes in version 0.99.16 (2019-04-17)
++ updated SNP function and added rtracklayer dependency
