@@ -76,8 +76,8 @@ load_GWAS_data <- function(association_file,
 
   # Split effects into even and odd rows and
   # recombine into a single row without duplicate columns
-  odd_effects <- effects[seq_along(1, nrow(effects), by = 2), ]
-  even_effects <- effects[seq_along(2, nrow(effects), by = 2), ]
+  odd_effects <- effects[seq(1, nrow(effects), by = 2), ]
+  even_effects <- effects[seq(2, nrow(effects), by = 2), ]
   effects <- merge(odd_effects, even_effects, by = "Marker")
   effects <- dplyr::mutate(
     effects,
