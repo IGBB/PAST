@@ -26,7 +26,6 @@ Does not return a value
 Plot Rugplots for Selected Pathways
 }
 \examples{
-options(bitmapType="cairo")
-data(rugplots_data)
+example("find_pathway_significance")
 plot_pathways(rugplots_data, "pvalue", "0.03", "decreasing", tempdir())
 }

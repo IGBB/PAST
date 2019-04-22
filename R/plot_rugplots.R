@@ -5,15 +5,14 @@
 #' @param filter_type The parameter to be used for filtering
 #' @param filter_parameter The cut-off value of the filtering parameter
 #' @param mode The mode used to create the data (increasing/decreasing)
-#' @param output_directory An existing directory to save results to
+#' @param output_directory An existing directory to save results in
 #' @importFrom rlang .data
 #' @import dplyr
 #' @import ggplot2
 #' @export
 #' @return Does not return a value
 #' @examples
-#' options(bitmapType="cairo")
-#' data(rugplots_data)
+#' example("find_pathway_significance")
 #' plot_pathways(rugplots_data, "pvalue", "0.03", "decreasing", tempdir())
 plot_pathways <-
   function(rugplots_data,

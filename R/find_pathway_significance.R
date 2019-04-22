@@ -63,10 +63,10 @@ globalVariables("pathway")
 #' @export
 #'
 #' @examples
+#' example("assign_SNPs_to_genes")
 #' demo_pathways_file = system.file("extdata", "pathways.txt.xz",
 #'   package = "PAST", mustWork = TRUE)
-#' data(genes)
-#' rugplots_data <- find_pathway_signficance(genes, demo_pathways_file, 5,
+#' rugplots_data <- find_pathway_significance(genes, demo_pathways_file, 5,
 #'   "increasing", 1000, 2)
 find_pathway_significance <-
   function(genes,
@@ -110,7 +110,8 @@ find_pathway_significance <-
         if (mode == "decreasing") {
           temp_data <- temp_data %>%
             dplyr::arrange(.data$effect) %>%
-            dplyr::mutate(rank = row_number())
+            dplyr::mutate(rank = row_number(),
+                          effect = abs(.data$effect))
         } else if (mode == "increasing") {
           temp_data <- temp_data %>%
             dplyr::arrange(desc(.data$effect)) %>%

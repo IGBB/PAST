@@ -4,63 +4,230 @@ author: "Adam Thrash"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{PAST}
+%\VignetteIndexEntry{PAST}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
----
-
-```{r setup, include = FALSE}
+  ---
+  
+  ```{r setup, include = FALSE}
 knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>"
+collapse = TRUE,
+comment = "#>"
 )
 ```
 
-Genome-wide association study (GWAS) of complex traits in maize and other crops has become very popular to identify regions of the genome that influence the traits. A False Discovery Rate threshold is set to limit the number of false positives found; however, this may cause GWAS to miss many true associations, which may fall just below the significance threshold. Metabolic pathway analysis focuses on the combined effects of many genes that are grouped according to their shared biological function. Combining GWAS data in a pathway analysis considers all genetic sequences positively associated with the trait of interest, regardless of magnitude, and jointly may highlight which lead to mechanisms for crop improvement and which warrant further study and manipulation, for example by gene editing. This has been done successfully in maize, but using manual manipulations and scripts written in Pearl and R that were difficult to implement [1]. A user friendly and computationally efficient tool, the Pathway Association Study Tool (PAST) has been written for interpreting GWAS studies of maize in the light of metabolic pathway information. It uses all GWAS marker/trait associations, regardless of significance or magnitude. 
+Genome-wide association study (GWAS) of complex traits in maize and other crops
+has become very popular to identify regions of the genome that influence these
+traits [1, 2, 3]. In general, hundreds of thousands of single nucleotide
+polymorphisms (SNPs) markers are each tested using F statistics for association
+with the trait, which assigns a p-value for the SNP-trait association.
+Individual marker-trait associations that meet the threshold set for the false
+discovery rate (FDR, the proportion of false positives among all significant
+results for some level α) are then studied in more detail to uncover hints as to
+the genetic architecture of the trait, and how best to improve it in the future.
+Many true associations may be missed in GWAS, however, because the threshold for
+FDR could be as low as α divided by the total number of SNPs being tested.
+Metabolic pathway analysis focuses on the combined effects of many genes that
+are grouped according to their shared biological function. Combining GWAS
+analysis with metabolic pathway analysis considers all genetic sequences
+positively associated with the trait of interest, regardless of magnitude, and
+jointly may highlight which sequences lead to mechanisms for crop improvement
+and which warrant further study and manipulation, for example, by gene editing.
 
-# Input files for PAST and how they are generated
-
-* association file – GWAS is performed using trait data (phenotypes measured on all individuals in an association panel) and genotypic data, usually high density SNP data sets. Following GWAS analysis using the General Linear Model (GLM) or Mixed Linear Model (MLM), TASSEL [2] generates output files presenting associations between the genetic markers used in the study and the trait under study (with correction for population structure and relatedness within the population used). For each SNP-trait association, the F-statistics and p-values are displayed, along with degrees of freedom, error mean square for the model, R2 of the model (the portion of the total variation explained by the full model), and R2 of the marker (the portion of total variation explained by the marker but not by the other terms in the model). The p-value and R2 values are used from every marker-trait association as inputs into PAST. PAST only accepts bi-allelic markers; those with more than 2 alleles are dropped during the analysis.
-* effects file - For every marker/trait association in the association file, the number of observations for taxa carrying that allele (Obs), the chromosomal location of the marker, and the estimate of the effect of that allele is calculated for every marker allele and presented in the effects file. Because of the way that TASSEL codes alleles, the last allele estimate for a marker is always zero and the other allele estimates are relative to that. The absolute value of each non-zero SNP effect is what is input into PAST.
-* LD file – Linkage disequilibrium is calculated between pairs of markers that were used in a GWAS study. TASSEL does this and will calculate D’, the standardized disequilibrium coefficient, to determine recombination between pairs of alleles (polymorphic loci). This will give a genetic distance between these pairs; TASSEL also calculates r2 and p values. The genetic distance between markers is not a physical distance, which is generally measured in base pairs or Kbp, and although it is correlated, will vary across chromosomal regions within a species. Thus, associations can be found between a SNP and a causal gene that may be thousands or tens of thousands of base pairs away. 
+While combined GWAS and pathway analyses were highly successful in uncovering
+associated pathways, the analyses were slow and cumbersome, as the analysis
+tools were written in a combination of R, Perl, and Bash, and the output of each
+analysis was manually input into the next analysis [1]. The Pathway Association
+Study Tool (PAST) was developed to facilitate easier and more efficient
+GWAS-based metabolic pathway analysis. PAST was tested using maize but is 
+usable for other species as well. It tracks all SNP marker - trait associations,
+regardless of significance or magnitude. PAST groups SNPs into linkage blocks 
+based on linkage disequilibrium (LD) data and identifies a tagSNP from each 
+block. PAST then identifies genes within a user-defined distance of the tagSNPs,
+and transfers the attributes of the tagSNP to the gene(s), including the allele
+effect, R2 and p-value of the original SNP-trait association found from the GWAS
+analysis.  Finally, PAST uses the gene effect values to calculate an enrichment
+score (ES) and p-value for each pathway. 
 
 # PAST
 
-PAST is an implementation of the GWAS to pathway analysis described in Tang et al. 2015. PAST uses the linkage disequilibrium output from TASSEL between each marker SNP (denoted as the reference SNP) and its closest neighboring SNPs (50 upstream and 50 downstream). Within this window, linkages between SNPs are calculated.  The threshold for linkage can be determined from a plot of linkage disequilibrium values (-log(pDiseq) against r2). Based on this plot, Tang et al. [1]defined linkage when the two SNPs being compared had r2  > 0.8 [3]. PAST uses linkage data to determine which SNP represents the linkage group (the tagSNP), and then uses the tagSNP to determine the linked gene(s) within a window of ± 1 Kb. The rationale behind the decision to use 1 Kb is that most genes are regulated within 1 Kb upstream and downstream of the start and stop codons, respectively.  At this point, the association and effects data of the tagSNP are transferred to the linked gene. If more than one gene is equally linked to a block of genes, the attributes of the tagSNP are transferred to both (or all) linked genes (but more than one gene within the 2 Kb window is rare in maize)
+PAST is an implementation of the GWAS to pathway analysis described in Tang et
+al. 2015.
 
-# Interpreting PAST output
+The following blocks of code show how to analyze data with PAST from loading in 
+the data to plotting the rugplots.
 
-Pathway scores are obtained from gene-set enrichment calculations [1, 3]. First, all genes found by tagSNPs are ranked by their effect values from negative to positive in the case of traits where a reduction is beneficial, as in disease resistance, or vice-a-versa where increase is beneficial, as in the case of yield. Enrichment is based on gene membership in pathways, as assigned by MaizeCyc. Only pathways with five or more genes are considered to reduce bias from small sample size. Next, a running sum is calculated in a manner similar to that used for a weighted Kolmogorov-Smirnov statistic. The running sum statistic increases or decreases if genes are or are not, in the pathway, respectively. The score increases by the fraction of genes in the pathway weighted by the absolute value of the gene effect value or decreases by the fraction of genes not in the pathway. It is a running sum statistic because each gene is considered sequentially in order of their rank among all genes. The final enrichment score (ES) for the pathway is the maximum positive deviation from zero and can be visualized by plotting the values of the running sum statistic against the rank order of genes (see section on rug plots). The significance of a pathway is determined by running 1000 permutations of all genes and their gene effect values to generate a null distribution for the ES. The null distribution mean (μ) and standard deviation (σ) serve to normalize the ES for the pathway. The values of p are then corrected for the false discovery rate as calculated by the QVALUE package [4] in R. 
-
-Rug plots: A rug plot is generated for each pathway of interest to visualize the gene-set enrichment calculation. All genes found by the tagSNPs are ranked based on their effect values and their ranks are projected along the x axis of the plot. Hatch marks along the top of the graph denote the rank position of the genes that have membership in the pathway. Values of the running sum statistic enrichment score for each pathway gene are then plotted against their rank. The highest point in the curve is the ES for the pathway and is denoted by the vertical dashed line.
-
-# Using PAST
-
-The following block of code show how to analyze data with PAST from loading in the data to plotting the rugplots.
-
-```{r}
+```{r setup files}
 library(PAST)
+demo_association_file = system.file("extdata", "association.txt.xz", 
+                                    package = "PAST", mustWork = TRUE)
+demo_effects_file = system.file("extdata", "effects.txt.xz", 
+                                package = "PAST", mustWork = TRUE)
+demo_LD_file = system.file("extdata", "LD.txt.xz", 
+                           package = "PAST", mustWork = TRUE)
+demo_genes_file = system.file("extdata", "genes.gff", 
+                              package = "PAST", mustWork = TRUE)
+demo_pathways_file = system.file("extdata", "pathways.txt.xz", 
+                                 package = "PAST", mustWork = TRUE)
+```
 
-demo_association_file = system.file("extdata", "association.txt.xz", package = "PAST", mustWork = TRUE)
-demo_effects_file = system.file("extdata", "effects.txt.xz", package = "PAST", mustWork = TRUE)
-demo_linkage_disequilibrium_file = system.file("extdata", "LD.txt.xz", package = "PAST", mustWork = TRUE)
-demo_genes_file = system.file("extdata", "genes.gff", package = "PAST", mustWork = TRUE)
-demo_pathways_file = system.file("extdata", "pathways.txt.xz", package = "PAST", mustWork = TRUE)
+## Loading GWAS Data
 
-gwas_data <- load_GWAS_data(demo_association_file, demo_effects_file)
-LD <- load_LD(demo_linkage_disequilibrium_file)
-genes <-assign_SNPs_to_genes(gwas_data, LD, demo_genes_file, 1000, 0.8, 4)
-rugplots_data <- analyze_pathways(genes, demo_pathways_file, 5, "increasing", 1000, 2)
-plot_pathways(rugplots_data, "pvalue", 0.02, "increasing", tempdir())
+Loading GWAS data takes the statistics and effects from a GWAS and stores them 
+together. In the process, non-biallelic data is dropped. The two files are
+described below.
+
+* association file – GWAS is performed using trait data (phenotypes measured on
+all individuals in an association panel) and genotypic data, usually high 
+density SNP data sets. Following GWAS analysis using the General Linear Model
+(GLM) or Mixed Linear Model (MLM), TASSEL [2] generates output files presenting
+associations between the genetic markers used in the study and the trait under
+study (with correction for population structure and relatedness within the
+population used). For each SNP-trait association, the F-statistics and p-values
+are displayed, along with degrees of freedom, error mean square for the model,
+R^2 of the model (the portion of the total variation explained by the full 
+model), and R^2 of the marker (the portion of total variation explained by the
+marker but not by the other terms in the model). The p-value and R^2 values are
+used from every marker-trait association as inputs into PAST. PAST only accepts
+bi-allelic markers; those with more than 2 alleles are dropped during the
+analysis.
+
+* effects file - For every marker/trait association in the association file, the
+number of observations for taxa carrying that allele (Obs), the chromosomal
+location of the marker, and the estimate of the effect of that allele is
+calculated for every marker allele and presented in the effects file. Because of
+the way that TASSEL codes alleles, the last allele estimate for a marker is
+always zero and the other allele estimates are relative to that.
+
+```{r loading_gwas_data}
+gwas_data <- load_GWAS_data(demo_association_file, 
+                            demo_effects_file)
+```
+
+## Loading LD Data
+
+LD data is loaded from the linkage disequilibrium file. In the process, 
+incomplete cases are dropped and the data is split into a data.frame for each 
+chromomsome. Your LD data's Chromosome information should match your GFF 
+annotation's chromosome column (the first column). The LD file is described
+below.
+
+* LD file – Linkage disequilibrium is calculated between pairs of markers that
+were used in a GWAS study. TASSEL does this and will calculate D’, the
+standardized disequilibrium coefficient, to determine recombination between
+pairs of alleles (polymorphic loci). This will give a genetic distance between
+these pairs; TASSEL also calculates r2 and p values. The genetic distance
+between markers is not a physical distance, which is generally measured in base
+pairs or Kbp, and although it is correlated, will vary across chromosomal
+regions within a species. Thus, associations can be found between a SNP and a
+causal gene that may be thousands or tens of thousands of base pairs away. 
+```{r loading_ld_data}
+LD <- load_LD(demo_LD_file)
+```
+
+## Assigning SNPs to Genes
+
+PAST uses the linkage disequilibrium output from TASSEL between each
+marker SNP (denoted as the reference SNP) and its closest neighboring SNPs (50
+upstream and 50 downstream). Within this window, linkages between SNPs are
+calculated.  The threshold for linkage can be determined from a plot of linkage
+disequilibrium values (-log(pDiseq) against r2). Based on this plot, Tang et al.
+[1] defined linkage when the two SNPs being compared had R^2  > 0.8 [3]. PAST
+uses linkage data to determine which SNP represents the linkage group (the 
+tagSNP), and then uses the tagSNP to determine the linked gene(s) within a 
+window of ± 1Kb. The rationale behind the decision to use 1 Kb is that most 
+genes are regulated within 1 Kb upstream and downstream of the start and stop 
+codons, respectively.  At this point, the association and effects data of the 
+tagSNP are transferred to the linked gene. If more than one gene is equally 
+linked to a tagSNP, the attributes of the tagSNP are transferred to both (or 
+all) linked genes.
+
+* genes_file - an annotations file in GFF format. The chromosome in the first
+column should match the chromosomes in your LD data.
+
+```{r assigning_SNPs}
+genes <-assign_SNPs_to_genes(gwas_data, 
+                             LD, 
+                             demo_genes_file, 
+                             1000, 
+                             0.8, 
+                             2)
+```
+
+## Finding Pathway Significance
+
+Pathway scores are obtained from gene-set enrichment calculations [1, 3]. First,
+all genes found by tagSNPs are ranked by their effect values from negative to 
+positive in the case of traits where a reduction is beneficial, as in disease 
+resistance, or vice-versa where increase is beneficial, as in the case of 
+yield. Enrichment is based on gene membership in pathways, as assigned by a 
+pathways database supplied by the user. Only pathways with a certain number of 
+genes (supplied by the user) or more genes are considered to reduce bias from 
+small sample size. Next, a running sum is calculated in a manner similar to that
+used for a weighted Kolmogorov-Smirnov statistic. The running sum statistic 
+increases or decreases if genes are or are not, in the pathway, respectively. 
+The score increases by the fraction of genes in the pathway weighted by the 
+absolute value of the gene effect value or decreases by the fraction of genes 
+not in the pathway. It is a running sum statistic because each gene is 
+considered sequentially in order of their rank among all genes. The final 
+enrichment score (ES) for the pathway is the maximum positive deviation from 
+zero and can be visualized by plotting the values of the running sum statistic 
+against the rank order of genes (see section on rug plots). The significance of
+a pathway is determined by running 1000 permutations of all genes and their gene
+effect values to generate a null distribution for the ES. The null distribution
+mean (μ) and standard deviation (σ) serve to normalize the ES for the pathway.
+The values of p are then corrected for the false discovery rate as calculated
+by the QVALUE package [4] in R.
+
+* pathways_file - the pathways file is a tab-delimited file that, for every
+gene in a pathway contains a line formatted as described below. The gene names
+in your pathways file must match the gene names in your GFF.
+
+`PWY-ID\tPathway Description\tGene`
+
+```{r finding_pathways}
+rugplots_data <- find_pathway_significance(genes, 
+                                           demo_pathways_file, 
+                                           5,
+                                           "increasing", 
+                                           1000, 
+                                           2)
+```
+
+## Plotting Selected Pathways
+
+
+A rug plot is generated for each pathway of interest to visualize the
+gene-set enrichment calculation. All genes found by the tagSNPs are ranked based
+on their effect values and their ranks are projected along the x axis of the
+plot. Hatch marks along the top of the graph denote the rank position of the
+genes that have membership in the pathway. Values of the running sum statistic
+enrichment score for each pathway gene are then plotted against their rank. The
+highest point in the curve is the ES for the pathway and is denoted by the
+vertical dashed line.
+
+```{r plotting}
+plot_pathways(rugplots_data, 
+              "pvalue", 
+              0.02, 
+              "increasing", 
+              tempdir())
 ```
 
 # References
 
-[1] Tang JD, Perkins A, Williams WP, Warburton ML. Using genome-wide associations to identify metabolic pathways involved in maize aflatoxin accumulation resistance. BMC Genomics. 2015;16. doi:10.1186/s12864-015-1874-9.
+[1] Tang JD, Perkins A, Williams WP, Warburton ML. Using genome-wide
+associations to identify metabolic pathways involved in maize aflatoxin 
+accumulation resistance. BMC Genomics. 2015;16. doi:10.1186/s12864-015-1874-9.
 
-[2] Bradbury PJ, Zhang Z, Kroon DE, Casstevens TM, Ramdoss Y, Buckler ES. TASSEL: software for association mapping of complex traits in diverse samples. Bioinformatics. 2007;23:2633–5.
+[2] Bradbury PJ, Zhang Z, Kroon DE, Casstevens TM, Ramdoss Y, Buckler ES. 
+TASSEL: software for association mapping of complex traits in diverse samples. 
+Bioinformatics. 2007;23:2633–5.
 
-[3] Subramanian A, Tamayo P, Mootha VK, Mukherjee S, Ebert BL, Gillette MA, et al. Gene set enrichment analysis: a knowledge-based approach for interpreting genome-wide expression profiles. Proc Natl Acad Sci U S A. 2005;102:15545–50.
+[3] Subramanian A, Tamayo P, Mootha VK, Mukherjee S, Ebert BL, Gillette MA, 
+et al. Gene set enrichment analysis: a knowledge-based approach for interpreting
+genome-wide expression profiles. Proc Natl Acad Sci U S A. 2005;102:15545–50.
 
-[4] Storey JD, Tibshirani R. Statistical significance for genomewide studies. Proc Natl Acad Sci U S A. 2003;100:9440–5.
+[4] Storey JD, Tibshirani R. Statistical significance for genomewide studies. 
+Proc Natl Acad Sci U S A. 2003;100:9440–5.
 

@@ -2,7 +2,7 @@
 # doesn't understand how to deal with variable
 # created by foreach loops
 globalVariables("snp_chunk")
-globalVariables("block")
+globalVariables("chunk")
 
 #' Determine Linkage
 #'
@@ -113,27 +113,27 @@ assign_chunk <- function(gff, chunk, window) {
                                    "SNP2"),
            effects_same_sign_use = ifelse(.data$SNP1_effect == .data$SNP2_effect,
                                           "SNP2",
-                                          largest_effect),
-           pvalue_equal = ifelse(SNP1_pvalue == SNP2_pvalue,
+                                          .data$largest_effect),
+           pvalue_equal = ifelse(.data$SNP1_pvalue == .data$SNP2_pvalue,
                                  TRUE,
                                  FALSE),
-           pvalue_not_equal_use = ifelse(SNP1_pvalue > SNP2_pvalue,
+           pvalue_not_equal_use = ifelse(.data$SNP1_pvalue > .data$SNP2_pvalue,
                                          "SNP2",
                                          "SNP1"),
-           single_pvalue_use = ifelse(pvalue_equal == FALSE,
-                                      pvalue_not_equal_use,
+           single_pvalue_use = ifelse(.data$pvalue_equal == FALSE,
+                                      .data$pvalue_not_equal_use,
                                       "PROBLEM"),
-           single_use = ifelse(effects_same_sign == TRUE,
-                               effects_same_sign_use,
-                               pvalue_not_equal_use),
+           single_use = ifelse(.data$effects_same_sign == TRUE,
+                               .data$effects_same_sign_use,
+                               .data$pvalue_not_equal_use),
            distance_use = ifelse(.data$Dist_bp < window,
-                                 effects_same_sign_use,
+                                 .data$effects_same_sign_use,
                                  "SNP2"),
-           many_use = ifelse(effects_same_sign == TRUE,
-                             distance_use,
+           many_use = ifelse(.data$effects_same_sign == TRUE,
+                             .data$distance_use,
                              "SNP2"),
-           problem_use = ifelse(effects_same_sign == TRUE,
-                                effects_same_sign_use,
+           problem_use = ifelse(.data$effects_same_sign == TRUE,
+                                .data$effects_same_sign_use,
                                 "PROBLEM"),
            chromosome = .data$Locus,
            position = NA,
@@ -168,7 +168,7 @@ assign_chunk <- function(gff, chunk, window) {
                                effect = .data$SNP1_effect,
                                p.value = .data$SNP1_pvalue)
   ) %>%
-    dplyr::select(-unlinked)
+    dplyr::select(-.data$unlinked)
 
   # handle single linked SNPs
   conditions <- rbind(conditions %>%
@@ -185,8 +185,8 @@ assign_chunk <- function(gff, chunk, window) {
                                                 .data$SNP1_pvalue,
                                                 .data$SNP2_pvalue))
   ) %>%
-    dplyr::select(-single_linked,
-           -single_use)
+    dplyr::select(-.data$single_linked,
+           -.data$single_use)
 
   # handle multiply-linked SNPs
   conditions <- rbind(conditions %>%
@@ -203,8 +203,8 @@ assign_chunk <- function(gff, chunk, window) {
                                                 .data$SNP1_pvalue,
                                                 .data$SNP2_pvalue))
   ) %>%
-    dplyr::select(-many_linked,
-           -many_use)
+    dplyr::select(-.data$many_linked,
+           -.data$many_use)
 
   # handle problem SNPs
   tagSNPs <- rbind(conditions %>%
@@ -229,7 +229,7 @@ assign_chunk <- function(gff, chunk, window) {
            .data$linked_snp_count) %>%
     dplyr::mutate(window_start = .data$position - window,
            window_end = .data$position + window) %>%
-    dplyr::arrange(position)
+    dplyr::arrange(.data$position)
 
   # assign genes
   inner_join(tagSNPs, gff, by = c("chromosome" = "seqid")) %>%
@@ -331,14 +331,8 @@ find_representative_SNP_gene_pairing <- function(chunk) {
 #' @export
 #'
 #' @examples
-#' demo_association_file = system.file("extdata", "association.txt.xz",
-#'   package = "PAST", mustWork = TRUE)
-#' demo_effects_file = system.file("extdata", "effects.txt.xz",
-#'   package = "PAST", mustWork = TRUE)
-#' gwas_data <- load_GWAS_data(demo_association_file, demo_effects_file)
-#' demo_linkage_disequilibrium_file = system.file("extdata","LD.txt.xz",
-#' package = "PAST", mustWork = TRUE)
-#' LD <- load_LD(demo_linkage_disequilibrium_file)
+#' example("load_GWAS_data")
+#' example("load_LD")
 #' demo_genes_file = system.file("extdata", "genes.gff",
 #'   package = "PAST", mustWork = TRUE)
 #' genes <-assign_SNPs_to_genes(gwas_data, LD, demo_genes_file, 1000, 0.8, 2)

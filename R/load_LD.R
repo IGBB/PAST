@@ -14,9 +14,9 @@
 #' @export
 #'
 #' @examples
-#' demo_linkage_disequilibrium_file = system.file("extdata","LD.txt.xz",
+#' demo_LD_file = system.file("extdata","LD.txt.xz",
 #'   package = "PAST", mustWork = TRUE)
-#' LD <- load_LD(demo_linkage_disequilibrium_file)
+#' LD <- load_LD(demo_LD_file)
 load_LD <- function(LD_file,
                     LD_columns = c("Locus1",
                                    "Position1",

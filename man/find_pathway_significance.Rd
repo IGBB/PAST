@@ -30,9 +30,9 @@ Rugplots data
 Find Pathway Significance
 }
 \examples{
+example("assign_SNPs_to_genes")
 demo_pathways_file = system.file("extdata", "pathways.txt.xz",
   package = "PAST", mustWork = TRUE)
-data(genes)
-rugplots_data <- find_pathway_signficance(genes, demo_pathways_file, 5,
+rugplots_data <- find_pathway_significance(genes, demo_pathways_file, 5,
   "increasing", 1000, 2)
 }
