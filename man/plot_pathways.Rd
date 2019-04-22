@@ -2,13 +2,14 @@
 % Please edit documentation in R/plot_rugplots.R
 \name{plot_pathways}
 \alias{plot_pathways}
-\title{Plot Pathways}
+\title{Plot Rugplots for Selected Pathways}
 \usage{
 plot_pathways(rugplots_data, filter_type, filter_parameter, mode,
   output_directory)
 }
 \arguments{
-\item{rugplots_data}{The data to be plotted (returned from parse_pathways())}
+\item{rugplots_data}{The data to be plotted (returned from
+find_pathway_significance())}
 
 \item{filter_type}{The parameter to be used for filtering}
 
@@ -22,9 +23,9 @@ plot_pathways(rugplots_data, filter_type, filter_parameter, mode,
 Does not return a value
 }
 \description{
-Plot Pathways
+Plot Rugplots for Selected Pathways
 }
 \examples{
-data(rugplots_data)
-plot_pathways(rugplots_data, "pvalue", "0.03", "decreasing", "results")
+example("find_pathway_significance")
+plot_pathways(rugplots_data, "pvalue", "0.03", "decreasing", tempdir())
 }

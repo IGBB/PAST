@@ -35,3 +35,21 @@ Changes in version 0.99.11 (2019-04-15)
 
 Changes in version 0.99.12 (2019-04-15)
 + updated manual
+
+Changes in version 0.99.13 (2019-04-16)
++ addressed description issues
+
+Changes in version 0.99.14 (2019-04-16)
++ renamed merge function and changed method of describing input type
+
+Changes in version 0.99.15 (2019-04-17)
++ renamed LD function and changed added column name specification
+
+Changes in version 0.99.16 (2019-04-18)
++ updated SNP function and added rtracklayer dependency
+
+Changes in version 0.99.17 (2019-04-18)
++ updated pathways functions to reflect changes across other methods
+
+Changes in version 0.99.18 (2019-04-22)
++ documentation updates and minor code clean-up

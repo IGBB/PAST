@@ -1,6 +1,7 @@
-#' Plot Pathways
+#' Plot Rugplots for Selected Pathways
 #'
-#' @param rugplots_data The data to be plotted (returned from parse_pathways())
+#' @param rugplots_data The data to be plotted (returned from
+#'   find_pathway_significance())
 #' @param filter_type The parameter to be used for filtering
 #' @param filter_parameter The cut-off value of the filtering parameter
 #' @param mode The mode used to create the data (increasing/decreasing)
@@ -11,15 +12,14 @@
 #' @export
 #' @return Does not return a value
 #' @examples
-#' data(rugplots_data)
-#' plot_pathways(rugplots_data, "pvalue", "0.03", "decreasing", "results")
+#' example("find_pathway_significance")
+#' plot_pathways(rugplots_data, "pvalue", "0.03", "decreasing", tempdir())
 plot_pathways <-
   function(rugplots_data,
            filter_type,
            filter_parameter,
            mode,
            output_directory) {
-    dir.create(file.path(output_directory), showWarnings = FALSE)
 
     rugplots_data <- rugplots_data %>%
       dplyr::arrange(.data$pathway_number)
@@ -55,14 +55,16 @@ plot_pathways <-
     for (rank in names(rugplots_split)) {
       temp_data <- rugplots_split[[rank]]
       title <-
-        paste0(unique(as.character(temp_data$pathway_id)), " - ", unique(as.character(temp_data$pathway_name)))
+        paste0(unique(as.character(temp_data$pathway_id)), " - ",
+               unique(as.character(temp_data$pathway_name)))
       intercept <- temp_data %>%
         dplyr::arrange(desc(.data$running_enrichment_score)) %>%
         dplyr::select(.data$rank)
       intercept <- intercept[, 1][1]
       rugplot <-
         ggplot(temp_data,
-               aes(x = temp_data$rank, y = temp_data$running_enrichment_score)) +
+               aes(x = temp_data$rank,
+                   y = temp_data$running_enrichment_score)) +
         geom_line(stat = "identity") +
         geom_rug(sides = "t", position = "jitter") +
         geom_vline(xintercept = intercept,
