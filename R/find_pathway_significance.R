@@ -85,7 +85,7 @@ find_pathway_significance <-
     # sample to create 1000 random distributions
     effects <- genes %>% dplyr::select(.data$name, .data$effect)
     effects <-
-      cbind(effects, vapply(seq(sample_size),
+      cbind(effects, vapply(seq_along(sample_size),
                             function(i) sample(effects$effect),
                             FUN.VALUE = double(nrow(effects))))
 
@@ -162,7 +162,7 @@ find_pathway_significance <-
 
     pathways_unique <- cbind(pathways_unique, column_observations)
     colnames(pathways_unique) <-
-      c("Pathway", "ES_Observed", seq(sample_size))
+      c("Pathway", "ES_Observed", seq_along(sample_size))
     colnames(pathways_unique)[3:(sample_size + 2)] <-
       paste0("ES", colnames(pathways_unique)[3:(sample_size + 2)])
     pathways_unique <- pathways_unique %>%
@@ -177,7 +177,7 @@ find_pathway_significance <-
       dplyr::mutate(
         NES_Observed = (.data$ES_Observed - .data$permutation_mean) / .data$permutation_standard_deviation
       )
-    for (i in seq(sample_size)) {
+    for (i in seq_along(sample_size)) {
       pathways_unique[i + 2] <-
         (pathways_unique[i + 2] - pathways_unique[sample_size + 3]) / pathways_unique[sample_size + 4]
     }

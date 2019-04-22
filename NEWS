@@ -50,3 +50,6 @@ Changes in version 0.99.16 (2019-04-18)
 
 Changes in version 0.99.17 (2019-04-18)
 + updated pathways functions to reflect changes across other methods
+
+Changes in version 0.99.18 (2019-04-22)
++ documentation updates and minor code clean-up
