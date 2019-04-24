@@ -181,15 +181,8 @@ find_pathway_significance <-
       pathways_unique[i + 2] <-
         (pathways_unique[i + 2] - pathways_unique[sample_size + 3]) / pathways_unique[sample_size + 4]
     }
-
-    if (mode == "increasing") {
-      pathways_unique <- pathways_unique %>%
-        dplyr::mutate(pvalue = 1-pnorm(.data$NES_Observed))
-    } else if (mode == "decreasing") {
-      pathways_unique <- pathways_unique %>%
-        dplyr::mutate(pvalue = pnorm(.data$NES_Observed))
-    }
-
+    pathways_unique <- pathways_unique %>%
+      dplyr::mutate(pvalue = 1-pnorm(.data$NES_Observed))
     pathways_unique <-dplyr::arrange(pathways_unique, .data$pvalue)
     pathways_unique <- pathways_unique %>%
       dplyr::select(.data$Pathway,
@@ -218,7 +211,8 @@ find_pathway_significance <-
     if (mode == "decreasing") {
       temp_data <- temp_data %>%
         dplyr::arrange(.data$Effect) %>%
-        dplyr::mutate(rank = row_number())
+        dplyr::mutate(rank = row_number(),
+                      effect = abs(.data$Effect))
     } else if (mode == "increasing") {
       temp_data <- temp_data %>%
         dplyr::arrange(desc(.data$Effect)) %>%

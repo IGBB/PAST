@@ -5,7 +5,7 @@
 \title{Load GWAS data}
 \usage{
 load_GWAS_data(association_file, effects_file,
-  association_columns = c("Trait", "Marker", "Locus", "Site", "F", "p",
+  association_columns = c("Trait", "Marker", "Locus", "Site", "p",
   "marker_R2"), effects_columns = c("Trait", "Marker", "Locus", "Site",
   "Effect"))
 }
