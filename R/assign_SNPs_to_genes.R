@@ -39,52 +39,49 @@ determine_linkage <- function(chunk, r_squared_cutoff) {
 find_representative_SNP <- function(chunk, r_squared_cutoff) {
   chunk <- chunk %>%
     dplyr::mutate(linked_snp_count = nrow(chunk),
-                  linked_snp_count = ifelse(.data$R.2 < r_squared_cutoff,
-                                            0,
-                                            .data$linked_snp_count))
-  if (chunk[1, ]$linked_snp_count > 1) {
+                linked_snp_count = ifelse(.data$R.2 < r_squared_cutoff,
+                                          0,
+                                          .data$linked_snp_count))
+  # count the number of negative/positive effects in each chunk
+  negative <- sum(chunk$SNP2_effect < 0)
+  positive <- sum(chunk$SNP2_effect > 0)
 
-    # count the number of negative/positive effects in each chunk
-    negative <- sum(chunk$SNP2_effect < 0)
-    positive <- sum(chunk$SNP2_effect > 0)
+  # Find SNP with largest negative or positive effect
+  if (positive > negative) {
+    # sort in descending order
+    chunk <- chunk %>%
+      dplyr::arrange(desc(.data$SNP2_effect), .data$Dist_bp)
 
-    # Find SNP with largest negative or positive effect
-    if (positive > negative) {
+    # get top row
+    chunk <- chunk[1, ]
+
+  } else if (negative > positive) {
+
+    # sort in ascending order
+    chunk <- chunk %>%
+      dplyr::arrange(.data$SNP2_effect, .data$Dist_bp)
+
+    # get top row
+    chunk <- chunk[1, ]
+
+  } else if (negative == positive) {
+    if (chunk$SNP1_effect[[1]] > 0) {
+
       # sort in descending order
       chunk <- chunk %>%
-        dplyr::arrange(desc(.data$SNP2_effect), .data$Dist_bp)
+        dplyr::arrange(desc(.data$SNP2_effect))
 
       # get top row
-      chunk <- chunk[1, ]
-
-    } else if (negative > positive) {
-
+      chunk <- chunk[1, ] %>%
+        dplyr::mutate(linked_snp_count = -1)
+    } else{
       # sort in ascending order
       chunk <- chunk %>%
-        dplyr::arrange(.data$SNP2_effect, .data$Dist_bp)
+        dplyr::arrange(.data$SNP2_effect)
 
       # get top row
-      chunk <- chunk[1, ]
-
-    } else if (negative == positive) {
-      if (chunk$SNP1_effect[[1]] > 0) {
-
-        # sort in descending order
-        chunk <- chunk %>%
-          dplyr::arrange(desc(.data$SNP2_effect))
-
-        # get top row
-        chunk <- chunk[1, ] %>%
-          dplyr::mutate(linked_snp_count = -1)
-      } else{
-        # sort in ascending order
-        chunk <- chunk %>%
-          dplyr::arrange(.data$SNP2_effect)
-
-        # get top row
-        chunk <- chunk[1, ] %>%
-          dplyr::mutate(linked_snp_count = -1)
-      }
+      chunk <- chunk[1, ] %>%
+        dplyr::mutate(linked_snp_count = -1)
     }
   }
   chunk
@@ -231,6 +228,35 @@ assign_chunk <- function(gff, chunk, window) {
            window_end = .data$position + window) %>%
     dplyr::arrange(.data$position)
 
+  # assigned_genes = tagSNPs %>%
+  #   rowwise() %>%
+  #   mutate(name = ifelse(length(which((.data$window_start >= gff$start &
+  #                                 .data$window_end <= gff$end) |
+  #                                (gff$start >= .data$window_start &
+  #                                   gff$end <= .data$window_end) |
+  #                                (.data$window_start >= gff$start &
+  #                                   .data$window_start <= gff$end) |
+  #                                (.data$window_end >= gff$start &
+  #                                   .data$window_end <= gff$end)) > 0),
+  #                        gff[which((.data$window_start >= gff$start &
+  #                                     .data$window_end <= gff$end) |
+  #                                    (gff$start >= .data$window_start &
+  #                                       gff$end <= .data$window_end) |
+  #                                    (.data$window_start >= gff$start &
+  #                                       .data$window_start <= gff$end) |
+  #                                    (.data$window_end >= gff$start &
+  #                                       .data$window_end <= gff$end)), 4],
+  #                        NA))
+  #
+  # as.data.frame(assigned_genes %>%
+  #                 dplyr::select(chromosome,
+  #                               position,
+  #                               effect,
+  #                               p.value,
+  #                               linked_snp_count,
+  #                               name)) %>%
+  #   dplyr::filter(is.na(.data$name) == FALSE)
+
   # assign genes
   inner_join(tagSNPs, gff, by = c("chromosome" = "seqid")) %>%
     dplyr::filter(
@@ -254,15 +280,8 @@ assign_chunk <- function(gff, chunk, window) {
       .data$distance,
       .data$window_start,
       .data$window_end,
-      .data$source,
-      .data$type,
       .data$start,
-      .data$end,
-      .data$score,
-      .data$strand,
-      .data$phase,
-      .data$ID,
-      .data$biotype
+      .data$end
     )) %>%
     dplyr::mutate(name = .data$Name,
            Name = NULL)
@@ -344,7 +363,12 @@ assign_SNPs_to_genes <-
            r_squared_cutoff,
            num_cores) {
 
-    full_gff <- rtracklayer::readGFF(gff_file) %>% filter(.data$type == "gene")
+    full_gff <- rtracklayer::readGFF(gff_file) %>%
+      filter(.data$type == "gene") %>%
+      select(.data$seqid,
+             .data$start,
+             .data$end,
+             .data$Name)
     chromosomes <- as.character.factor(
       full_gff %>%
         dplyr::select(.data$seqid) %>%
@@ -398,10 +422,11 @@ assign_SNPs_to_genes <-
               ) %>%
               dplyr::arrange(.data$Site1)
           }
+          split <- 1000
           temp_data_list <- split(temp_data, temp_data$Position1)
           temp_data_list_split <- split(temp_data_list,
                                         ceiling(seq_along(temp_data_list)
-                                                /num_cores))
+                                                /split))
 
           temp_data <-
             foreach(
@@ -460,8 +485,16 @@ assign_SNPs_to_genes <-
             ) %>%
             dplyr::arrange(.data$Position1)
 
-          index <- c(0, cumsum(abs(diff(temp_data$Site2)) > 1))
-          temp_data_list <- split(temp_data, paste(temp_data$Position1, index))
+
+          singles = temp_data %>% dplyr::group_by(.data$Marker1) %>%
+            dplyr::summarise(count = n()) %>%
+            dplyr::filter(count == 1)
+
+          singles <- temp_data %>% filter(.data$Marker1 %in% singles$Marker1) %>%
+            mutate(linked_snp_count = 1)
+          blocks <- temp_data %>% filter(!(.data$Marker1 %in% singles$Marker1))
+          index <- c(0, cumsum(abs(diff(blocks$Site2)) > 1))
+          temp_data_list <- split(blocks, paste(blocks$Position1, index))
 
           temp_data <-
             foreach(
@@ -472,10 +505,12 @@ assign_SNPs_to_genes <-
               find_representative_SNP(data, r_squared_cutoff)
             }
 
-          split <- 1000
+          temp_data <- rbind(temp_data, singles)
+
+          split <- 100
           snp_list <-
             split(temp_data,
-                  rep(seq_along(split),
+                  rep(seq_len(split),
                       length.out = nrow(temp_data),
                       each = ceiling(nrow(temp_data) / split)
                   ))
