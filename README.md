@@ -4,7 +4,9 @@ The Pathway Association Study Tool (PAST) was developed to facilitate easier and
 
 # Installation
 
-To install PAST, run the following commands in R:
+PAST is available on [Bioconductor](https://bioconductor.org/packages/release/bioc/html/PAST.html).
+
+To install PAST from GitHub, run the following commands in R:
 
 ```R
 install.packages("devtools")
