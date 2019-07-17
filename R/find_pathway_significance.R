@@ -103,7 +103,7 @@ find_pathway_significance <-
       ) %dopar% {
         temp_data <-
           data.frame(matrix("NA", ncol = 2, nrow = nrow(effects)))
-        colnames(temp_data) <- c("name", "effect")
+        colnames(temp_data) <- c("gene", "effect")
         temp_data$effect <- effects[, i]
         temp_data$gene <- effects[, 1]
 
@@ -124,7 +124,8 @@ find_pathway_significance <-
 
         foreach(pathway = iter(pathways_unique$pathway_id, by = "row")) %do% {
           genes_in_pathway <-
-            dplyr::filter(pathways, pathways$pathway_id == pathway)
+            dplyr::filter(pathways, pathways$pathway_id == pathway) %>%
+            mutate(gene_id = as.character.factor(gene_id))
 
           ## get ranks and effects and sort by rank
           genes_in_pathway <-
@@ -134,8 +135,9 @@ find_pathway_significance <-
                   by.y = "gene") %>%
             dplyr::arrange(.data$rank) %>% unique()
 
-          ## check cutoff
+          # check cutoff
           if (nrow(genes_in_pathway) >= gene_number_cutoff) {
+
             # get factors using rank
             factors <- get_factors(genes_in_pathway$rank)
 
