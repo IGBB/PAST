@@ -19,56 +19,58 @@
 #'   package = "PAST", mustWork = TRUE)
 #' gwas_data <- load_GWAS_data(demo_association_file, demo_effects_file)
 load_GWAS_data <- function(association_file,
-                       effects_file,
-                       association_columns = c("Trait",
+                           effects_file,
+                           association_columns = c("Trait",
+                                                   "Marker",
+                                                   "Locus",
+                                                   "Site",
+                                                   "p",
+                                                   "marker_R2"),
+                           effects_columns = c("Trait",
                                                "Marker",
                                                "Locus",
                                                "Site",
-                                               "p",
-                                               "marker_R2"),
-                       effects_columns = c("Trait",
-                                           "Marker",
-                                           "Locus",
-                                           "Site",
-                                           "Effect")) {
+                                               "Effect")) {
 
-    stats <- read.table(association_file, header = TRUE, sep = "\t") %>%
-      dplyr::mutate(.data,
+  stats <- read.table(association_file, header = TRUE, sep = "\t") %>%
+    dplyr::mutate(.data,
                   Trait = !!as.name(association_columns[1]),
-                  Marker = !!as.name(association_columns[2]),
+                  Marker_original = !!as.name(association_columns[2]),
                   Chr = !!as.name(association_columns[3]),
                   Pos = !!as.name(association_columns[4]),
+                  Marker = paste0(Chr, "_", Pos),
                   p = !!as.name(association_columns[5]),
                   marker_R2 = !!as.name(association_columns[6])) %>%
-      dplyr::select(.data$Marker,
+    dplyr::select(.data$Marker,
+                  .data$Marker_original,
                   .data$Trait,
                   .data$Chr,
                   .data$Pos,
                   .data$p,
                   .data$marker_R2)
 
-    effects <- read.table(effects_file, header = TRUE, sep = "\t") %>%
-      dplyr::mutate(.data,
-                    Trait = !!as.name(effects_columns[1]),
-                    Marker = !!as.name(effects_columns[2]),
-                    Chr = !!as.name(effects_columns[3]),
-                    Pos = !!as.name(effects_columns[4]),
-                    Effect = !!as.name(effects_columns[5])) %>%
-      dplyr::select(.data$Marker,
-                    .data$Trait,
-                    .data$Chr,
-                    .data$Pos,
-                    .data$Effect)
+  effects <- read.table(effects_file, header = TRUE, sep = "\t") %>%
+    dplyr::mutate(.data,
+                  Trait = !!as.name(effects_columns[1]),
+                  Marker_original = !!as.name(effects_columns[2]),
+                  Chr = !!as.name(effects_columns[3]),
+                  Pos = !!as.name(effects_columns[4]),
+                  Effect = !!as.name(effects_columns[5])) %>%
+    dplyr::select(.data$Marker_original,
+                  .data$Trait,
+                  .data$Chr,
+                  .data$Pos,
+                  .data$Effect)
 
   # Delete all markers in effects and stats with more or less alleles than 2
   non_biallelic <- effects %>%
-    dplyr::group_by(.data$Marker) %>%
+    dplyr::group_by(.data$Marker_original) %>%
     dplyr::summarise(count = n()) %>%
     dplyr::filter(count != 2)
   effects <-
-    effects %>% dplyr::filter(!(.data$Marker %in% non_biallelic$Marker))
+    effects %>% dplyr::filter(!(.data$Marker_original %in% non_biallelic$Marker_original))
   stats <-
-    stats %>% dplyr::filter(!(.data$Marker %in% non_biallelic$Marker))
+    stats %>% dplyr::filter(!(.data$Marker_original %in% non_biallelic$Marker_original))
 
   # Remove all NaN data to prevent math with NaN
   stats <- stats %>% dplyr::filter(.data$marker_R2 != "NaN")
@@ -77,7 +79,7 @@ load_GWAS_data <- function(association_file,
   # recombine into a single row without duplicate columns
   odd_effects <- effects[seq(1, nrow(effects), by = 2), ]
   even_effects <- effects[seq(2, nrow(effects), by = 2), ]
-  effects <- merge(odd_effects, even_effects, by = "Marker")
+  effects <- merge(odd_effects, even_effects, by = "Marker_original")
   effects <- dplyr::mutate(
     effects,
     Trait = effects$Trait.x,
@@ -86,7 +88,7 @@ load_GWAS_data <- function(association_file,
   )
 
   # Merge stats and effects and return
-  all_data <- merge(stats, effects, by = "Marker") %>%
+  all_data <- merge(stats, effects, by = "Marker_original") %>%
     dplyr::mutate(
       Trait = .data$"Trait.x",
       Trait.x = NULL,
@@ -94,6 +96,7 @@ load_GWAS_data <- function(association_file,
     ) %>%
     dplyr::select(
       .data$Marker,
+      .data$Marker_original,
       .data$Chr,
       .data$Pos,
       .data$p,
