@@ -47,7 +47,8 @@ load_GWAS_data <- function(association_file,
                   .data$Chr,
                   .data$Pos,
                   .data$p,
-                  .data$marker_R2)
+                  .data$marker_R2) %>%
+    dplyr::mutate(Marker_original = as.character.factor(Marker_original))
 
   effects <- read.table(effects_file, header = TRUE, sep = "\t") %>%
     dplyr::mutate(.data,
@@ -60,7 +61,8 @@ load_GWAS_data <- function(association_file,
                   .data$Trait,
                   .data$Chr,
                   .data$Pos,
-                  .data$Effect)
+                  .data$Effect) %>%
+    dplyr::mutate(Marker_original = as.character.factor(Marker_original))
 
   # Delete all markers in effects and stats with more or less alleles than 2
   non_biallelic <- effects %>%
