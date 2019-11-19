@@ -12,21 +12,16 @@ globalVariables("chunk")
 #' @import dplyr
 #' @return Either the first unlinked SNP or a set of linked SNPs
 determine_linkage <- function(chunk, r_squared_cutoff) {
-  return_chunk = NULL
-  for (i in seq_along(chunk)){
-    data <- chunk[[i]]
+  lapply(chunk, function(data) {
     data <- data %>% dplyr::arrange(.data$Dist_bp)
     linked <- data %>% dplyr::filter(.data$R.2 >= r_squared_cutoff)
     unlinked <- data %>% dplyr::filter(.data$R.2 < r_squared_cutoff)
-
     if (nrow(unlinked) == nrow(data)) {
-      return_chunk <- rbind(return_chunk, unlinked[1, ])
+      unlinked[1, ]
     } else {
-      return_chunk <- rbind(return_chunk,
-                            linked %>% filter(.data$R.2 >= r_squared_cutoff))
+      linked %>% filter(.data$R.2 >= r_squared_cutoff)
     }
-  }
-  return_chunk
+  }) %>% dplyr::bind_rows()
 }
 
 #' Find representative SNP for a chunk of SNPs
@@ -227,67 +222,49 @@ assign_chunk <- function(gff, chunk, window) {
                   .data$p.value,
                   .data$distance,
                   .data$linked_snp_count) %>%
-    dplyr::mutate(window_start = .data$position - window,
-                  window_end = .data$position + window) %>%
+    dplyr::mutate(start = .data$position - window,
+                  stop = .data$position + window) %>%
     dplyr::arrange(.data$position)
 
-  # assigned_genes = tagSNPs %>%
-  #   rowwise() %>%
-  #   mutate(name = ifelse(length(which((.data$window_start >= gff$start &
-  #                                 .data$window_end <= gff$end) |
-  #                                (gff$start >= .data$window_start &
-  #                                   gff$end <= .data$window_end) |
-  #                                (.data$window_start >= gff$start &
-  #                                   .data$window_start <= gff$end) |
-  #                                (.data$window_end >= gff$start &
-  #                                   .data$window_end <= gff$end)) > 0),
-  #                        gff[which((.data$window_start >= gff$start &
-  #                                     .data$window_end <= gff$end) |
-  #                                    (gff$start >= .data$window_start &
-  #                                       gff$end <= .data$window_end) |
-  #                                    (.data$window_start >= gff$start &
-  #                                       .data$window_start <= gff$end) |
-  #                                    (.data$window_end >= gff$start &
-  #                                       .data$window_end <= gff$end)), 4],
-  #                        NA))
-  #
-  # as.data.frame(assigned_genes %>%
-  #                 dplyr::select(chromosome,
-  #                               position,
-  #                               effect,
-  #                               p.value,
-  #                               linked_snp_count,
-  #                               name)) %>%
-  #   dplyr::filter(is.na(.data$name) == FALSE)
-
   # assign genes
-  inner_join(tagSNPs, gff, by = c("chromosome" = "seqid")) %>%
-    dplyr::filter(
-      (
-        .data$window_start >= .data$start &
-          .data$window_end <= .data$end
-      ) |
-        (
-          .data$start >= .data$window_start & .data$end <= .data$window_end
-        ) |
-        (
-          .data$window_start >= .data$start &
-            .data$window_start <= .data$end
-        ) |
-        (
-          .data$window_end >= .data$start &
-            .data$window_end <= .data$end
-        )
-    ) %>%
+  gr1 = with(tagSNPs, GRanges(chromosome, IRanges(start = position, end = position)))
+  gr2 = with(gff, GRanges(seqid, IRanges(start = start-window, end = end+window, names = Name)))
+  overlaps = findOverlaps(query = gr1, subject = gr2)
+  data.frame(tagSNPs[queryHits(overlaps),], name=gff[subjectHits(overlaps),"Name"]) %>%
     dplyr::select(-c(
       .data$distance,
-      .data$window_start,
-      .data$window_end,
       .data$start,
-      .data$end
-    )) %>%
-    dplyr::mutate(name = .data$Name,
-                  Name = NULL)
+      .data$stop
+    )) %>% mutate(name = as.character.factor(name))
+  
+  
+  # inner_join(tagSNPs, gff, by = c("chromosome" = "seqid")) %>%
+  #   dplyr::filter(
+  #     (
+  #       .data$window_start >= .data$start &
+  #         .data$window_end <= .data$end
+  #     ) |
+  #       (
+  #         .data$start >= .data$window_start & .data$end <= .data$window_end
+  #       ) |
+  #       (
+  #         .data$window_start >= .data$start &
+  #           .data$window_start <= .data$end
+  #       ) |
+  #       (
+  #         .data$window_end >= .data$start &
+  #           .data$window_end <= .data$end
+  #       )
+  #   ) %>%
+  #   dplyr::select(-c(
+  #     .data$distance,
+  #     .data$window_start,
+  #     .data$window_end,
+  #     .data$start,
+  #     .data$end
+  #   )) %>%
+  #   dplyr::mutate(name = .data$Name,
+  #                 Name = NULL)
 }
 
 #' Find the SNP-gene assignment that represents SNPs assigned to a gene
@@ -381,7 +358,8 @@ assign_SNPs_to_genes <-
     )
 
     cl <- parallel::makeCluster(num_cores)
-    registerDoParallel(cl)
+    clusterEvalQ(cl, {library(dplyr); library(GenomicRanges)})
+    # registerDoParallel(cl)
 
     all_genes <- NULL
 
@@ -428,15 +406,18 @@ assign_SNPs_to_genes <-
           temp_data_list_split <- split(temp_data_list,
                                         ceiling(seq_along(temp_data_list)
                                                 /split))
+          
+          temp_data <- parLapply(cl, temp_data_list_split, determine_linkage, r_squared_cutoff = r_squared_cutoff) %>%
+            bind_rows()
 
-          temp_data <-
-            foreach(
-              data = temp_data_list_split,
-              .combine = rbind,
-              .packages = "dplyr"
-            ) %dopar% {
-              determine_linkage(data, r_squared_cutoff)
-            }
+          # temp_data <-
+          #   foreach(
+          #     data = temp_data_list_split,
+          #     .combine = rbind,
+          #     .packages = "dplyr"
+          #   ) %dopar% {
+          #     determine_linkage(data, r_squared_cutoff)
+          #   }
 
           gwas_data_for_chromosome <-
             dplyr::filter(gwas_data, .data$Chr == as.integer(chromosome))
@@ -499,19 +480,22 @@ assign_SNPs_to_genes <-
           blocks <- temp_data %>% filter(!(.data$Marker1 %in% singles$Marker1))
           index <- c(0, cumsum(abs(diff(blocks$Site2)) > 1))
           temp_data_list <- split(blocks, paste(blocks$Position1, index))
+          
+          temp_data <- parLapply(cl, temp_data_list, find_representative_SNP, r_squared_cutoff = r_squared_cutoff) %>%
+            bind_rows()
 
-          temp_data <-
-            foreach(
-              data = temp_data_list,
-              .combine = rbind,
-              .packages = "dplyr"
-            ) %dopar% {
-              find_representative_SNP(data, r_squared_cutoff)
-            }
+          # temp_data <-
+          #   foreach(
+          #     data = temp_data_list,
+          #     .combine = rbind,
+          #     .packages = "dplyr"
+          #   ) %dopar% {
+          #     find_representative_SNP(data, r_squared_cutoff)
+          #   }
 
           temp_data <- rbind(temp_data, singles)
 
-          split <- 100
+          split <- 4
           snp_list <-
             split(temp_data,
                   rep(seq_len(split),
@@ -524,14 +508,16 @@ assign_SNPs_to_genes <-
             mutate(seqid = as.character.factor(.data$seqid))
 
           # get genes in parallel
-          chromosome_genes <-
-            foreach(
-              snp_chunk = snp_list,
-              .combine = rbind,
-              .packages = "dplyr"
-            ) %dopar% {
-              assign_chunk(gff, snp_chunk, window)
-            }
+          chromosome_genes <- parLapply(cl, snp_list, assign_chunk, gff = gff, window = window) %>%
+            bind_rows() %>% arrange(position)
+          # chromosome_genes <-
+          #   foreach(
+          #     snp_chunk = snp_list,
+          #     .combine = rbind,
+          #     .packages = "dplyr"
+          #   ) %dopar% {
+          #     assign_chunk(gff, snp_chunk, window)
+          #   }
 
           all_genes <- rbind(all_genes, chromosome_genes)
         }
@@ -539,14 +525,16 @@ assign_SNPs_to_genes <-
     }
 
     group_by_gene <- split(all_genes, f = all_genes$name)
-    representative_genes <-
-      foreach(
-        chunk = group_by_gene,
-        .combine = rbind,
-        .packages = c("dplyr", "PAST")
-      ) %dopar% {
-        find_representative_SNP_gene_pairing(chunk)
-      }
+    representative_genes <-parLapply(cl, group_by_gene, find_representative_SNP_gene_pairing) %>%
+      bind_rows()
+    # representative_genes <-
+    #   foreach(
+    #     chunk = group_by_gene,
+    #     .combine = rbind,
+    #     .packages = c("dplyr", "PAST")
+    #   ) %dopar% {
+    #     find_representative_SNP_gene_pairing(chunk)
+    #   }
 
     stopCluster(cl)
 
