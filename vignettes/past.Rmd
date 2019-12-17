@@ -4,12 +4,12 @@ author: "Adam Thrash"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
-%\VignetteIndexEntry{PAST}
+  %\VignetteIndexEntry{PAST}
   %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
-  ---
+  \usepackage[utf8]{inputenc}
+---
   
-  ```{r setup, include = FALSE}
+```{r setup, include = FALSE}
 knitr::opts_chunk$set(
 collapse = TRUE,
 comment = "#>"

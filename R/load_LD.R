@@ -25,18 +25,15 @@ load_LD <- function(LD_file,
                                    "Site2",
                                    "Dist_bp",
                                    "R.2")) {
-
-  LD <- read.table(LD_file, header = TRUE) %>%
+  
+  LD <- read.table(LD_file, header = TRUE, na.strings = c("N/A" , "NaN" )) %>%
     dplyr::mutate(Locus = as.character(!!as.name(LD_columns[1])),
                   Position1 = !!as.name(LD_columns[2]),
                   Site1 = !!as.name(LD_columns[3]),
                   Position2 = !!as.name(LD_columns[4]),
                   Site2 = !!as.name(LD_columns[5]),
                   Dist_bp = !!as.name(LD_columns[6]),
-                  R.2 = as.numeric(!!as.name(LD_columns[7])),
-                  Dist_bp = ifelse(.data$Dist_bp == "N/A",
-                                   NA,
-                                   .data$Dist_bp)) %>%
+                  R.2 = as.numeric(!!as.name(LD_columns[7]))) %>% 
     dplyr::select(.data$Locus,
                   .data$Position1,
                   .data$Site1,
@@ -44,6 +41,6 @@ load_LD <- function(LD_file,
                   .data$Site2,
                   .data$Dist_bp,
                   .data$R.2)
-  LD <- LD[complete.cases(LD), ]
+  LD <- LD %>% filter(is.na(.data$R.2) != TRUE)
   split(LD, f = LD$Locus)
 }

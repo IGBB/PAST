@@ -38,7 +38,7 @@ load_GWAS_data <- function(association_file,
                   Marker_original = !!as.name(association_columns[2]),
                   Chr = !!as.name(association_columns[3]),
                   Pos = !!as.name(association_columns[4]),
-                  Marker = paste0(Chr, "_", Pos),
+                  Marker = paste0(.data$Chr, "_", .data$Pos),
                   p = !!as.name(association_columns[5]),
                   marker_R2 = !!as.name(association_columns[6])) %>%
     dplyr::select(.data$Marker,
@@ -47,7 +47,8 @@ load_GWAS_data <- function(association_file,
                   .data$Chr,
                   .data$Pos,
                   .data$p,
-                  .data$marker_R2)
+                  .data$marker_R2) %>%
+    dplyr::mutate(Marker_original = as.character.factor(.data$Marker_original))
 
   effects <- read.table(effects_file, header = TRUE, sep = "\t") %>%
     dplyr::mutate(.data,
@@ -60,7 +61,8 @@ load_GWAS_data <- function(association_file,
                   .data$Trait,
                   .data$Chr,
                   .data$Pos,
-                  .data$Effect)
+                  .data$Effect) %>%
+    dplyr::mutate(Marker_original = as.character.factor(.data$Marker_original))
 
   # Delete all markers in effects and stats with more or less alleles than 2
   non_biallelic <- effects %>%
@@ -68,9 +70,11 @@ load_GWAS_data <- function(association_file,
     dplyr::summarise(count = n()) %>%
     dplyr::filter(count != 2)
   effects <-
-    effects %>% dplyr::filter(!(.data$Marker_original %in% non_biallelic$Marker_original))
+    effects %>% 
+    dplyr::filter(!(.data$Marker_original %in% non_biallelic$Marker_original))
   stats <-
-    stats %>% dplyr::filter(!(.data$Marker_original %in% non_biallelic$Marker_original))
+    stats %>% 
+    dplyr::filter(!(.data$Marker_original %in% non_biallelic$Marker_original))
 
   # Remove all NaN data to prevent math with NaN
   stats <- stats %>% dplyr::filter(.data$marker_R2 != "NaN")
