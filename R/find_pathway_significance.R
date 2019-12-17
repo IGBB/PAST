@@ -125,7 +125,7 @@ find_pathway_significance <-
         foreach(pathway = iter(pathways_unique$pathway_id, by = "row")) %do% {
           genes_in_pathway <-
             dplyr::filter(pathways, pathways$pathway_id == pathway) %>%
-            mutate(gene_id = as.character.factor(gene_id))
+            mutate(gene_id = as.character.factor(.data$gene_id))
 
           ## get ranks and effects and sort by rank
           genes_in_pathway <-

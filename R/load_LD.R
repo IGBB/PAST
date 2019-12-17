@@ -41,6 +41,6 @@ load_LD <- function(LD_file,
                   .data$Site2,
                   .data$Dist_bp,
                   .data$R.2)
-  LD <- LD %>% filter(is.na(R.2) != TRUE)
+  LD <- LD %>% filter(is.na(.data$R.2) != TRUE)
   split(LD, f = LD$Locus)
 }
