@@ -1,0 +1,23 @@
+citHeader("To cite PAST in publications use:")
+
+citEntry(entry = "Article",
+         title        = "PAST: The Pathway Association Studies Tool to Infer Biological Meaning from GWAS Datasets",
+         author       = personList(as.person("Adam Thrash"),
+                                   as.person("Juliet D. Tang"),
+                                   as.person("Mason DeOrnellis"),
+                                   as.person("Daniel G. Peterson"),
+                                   as.person("Marilyn L. Warburton")),
+         journal      = "Plants",
+         year         = "2020",
+         month        = "Jan",
+         volume       = "9",
+         number       = "1",
+         pages        = "58",
+         url          = "https://doi.org/10.3390/plants9010058",
+         
+         textVersion  =
+           paste("Thrash, Adam, Juliet D. Tang, Mason DeOrnellis, Daniel G. Peterson, and Marilyn L. Warburton. (2020).",
+                 "PAST: The Pathway Association Studies Tool to Infer Biological Meaning from GWAS Datasets",
+                 "Plants, 9(1), 58.",
+                 "URL https://doi.org/10.3390/plants9010058.")
+)

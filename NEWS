@@ -61,4 +61,7 @@ Changes in version 0.99.19 (2019-04-24)
 + improvements to speed
 
 Changes in version 1.2.1 (2019-12-17)
-+ minor corrections to based on original method
++ minor corrections to package based on original method
+
+Changes in version 1.2.3 (2020-02-27)
++ added correct citation after paper publication
