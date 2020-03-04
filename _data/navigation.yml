@@ -1,8 +1,8 @@
 nav_list_title: Navigation
 nav:
 
-- title: Home
-  url: /
+- title: Running PAST through R
+  url: /running_r/
 
-- title: PAST Shiny
-  url: /shiny
+- title: Running PAST through Shiny
+  url: /running_rshiny/
