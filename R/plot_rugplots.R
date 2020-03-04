@@ -20,7 +20,7 @@ plot_pathways <-
            filter_parameter,
            mode,
            output_directory) {
-
+    
     rugplots_data <- rugplots_data %>%
       dplyr::arrange(.data$pathway_number)
     write.table(
@@ -30,19 +30,22 @@ plot_pathways <-
       row.names = FALSE,
       quote = FALSE
     )
-
+    
     if (filter_type == "rank") {
       rugplots_data <- rugplots_data %>%
         dplyr::filter(.data$pathway_number <= filter_parameter)
     } else if (filter_type == "pvalue") {
       rugplots_data <- rugplots_data %>%
         dplyr::filter(.data$pvalue <= filter_parameter)
+    } else if (filter_type == "qvalue") {
+      rugplots_data <- rugplots_data %>%
+        dplyr::filter(.data$qvalue <= filter_parameter)
     } else {
       print("Incorrect filtering type. Filtering at p-value <= 0.05")
       rugplots_data <- rugplots_data %>%
         dplyr::filter(.data$pvalue <= 0.05)
     }
-
+    
     write.table(
       rugplots_data,
       file = paste0(output_directory, "/", mode, ".filtered.txt"),
@@ -51,7 +54,7 @@ plot_pathways <-
       quote = FALSE
     )
     rugplots_split <- split(rugplots_data, rugplots_data$pathway_number)
-
+    
     for (rank in names(rugplots_split)) {
       temp_data <- rugplots_split[[rank]]
       title <-
