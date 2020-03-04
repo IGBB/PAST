@@ -23,3 +23,7 @@ install_github("IGBB/PAST")
 * `assign_SNPs_to_genes`: takes loaded GWAS data, loaded LD data, a GFF annotations file, a window size, a r^2 cut-off value, and a number of cores and assigned SNPs to genes
 * `find_pathway_significance`: takes genes, a pathways database file, a minimum number of genes that must be in a pathway to retain the pathway for analysis, the mode of the analysis, and a number of cores and calculates the enrichment score, the p-value, and the q-value for each pathway
 * `plot_pathways`: takes the pathways data from `find_pathway_significance`, a filter type (p-value or q-value), a filter cut-off, the mode used to generate the data, and a directory and plots the pathways that pass the filter, saving them to the given directory
+
+# Citation
+
+Thrash A, Tang JD, DeOrnellis M, Peterson DG, Warburton ML (2020). “PAST: The Pathway Association Studies Tool to Infer Biological Meaning from GWAS Datasets.” Plants, 9(1), 58. [https://doi.org/10.3390/plants9010058](https://doi.org/10.3390/plants9010058). 
