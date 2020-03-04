@@ -65,3 +65,6 @@ Changes in version 1.2.1 (2019-12-17)
 
 Changes in version 1.2.3 (2020-02-27)
 + added correct citation after paper publication
+
+Changes in version 1.2.4 (2020-03-04)
++ brought code in line with documentation
