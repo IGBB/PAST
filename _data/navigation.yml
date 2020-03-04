@@ -1,0 +1,8 @@
+nav_list_title: Navigation
+nav:
+
+- title: Home
+  url: /
+
+- title: PAST Shiny
+  url: /shiny
