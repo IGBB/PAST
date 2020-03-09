@@ -192,7 +192,7 @@ ui <- dashboardPage(
                 box(
                   title = "Begin Analysis", status = "primary", solidHeader = TRUE, width = 3, height = 300,
                   style = "height:270px; overflow-y: scroll;",
-                  tags$p("When all parameters have begin set, click the button below to begin the analysis. The results of the analysis can be viewed in the Results tab."),
+                  tags$p("When all parameters have been set, click the button below to begin the analysis. The results of the analysis can be viewed in the Results tab."),
                   br(),
                   actionButton("start_button", "Begin Analysis")
                 ),
