@@ -6,3 +6,6 @@ nav:
 
 - title: Running PAST through Shiny
   url: /running_rshiny/
+
+- title: FAQ
+  url: /faq/
