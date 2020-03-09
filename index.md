@@ -8,7 +8,7 @@ The Pathway Association Study Tool (PAST) was developed to facilitate easier and
 
 ## Installation
 
-PAST requires R > 3.5. R can be downloaded from [here](https://rstudio.com/products/rstudio/). Users who are unfamiliar with R are encouraged to use [RStudio](https://rstudio.com/products/rstudio/). Once R is installed, PAST can be installed from [Bioconductor](https://bioconductor.org/packages/release/bioc/html/PAST.html) with the following lines of code in an R Console.
+PAST requires R > 3.5. R can be downloaded from [here](https://www.r-project.org/). R can often be installed via package manager on Linux. Users who are unfamiliar with R are encouraged to use [RStudio](https://rstudio.com/products/rstudio/) to run the following commands. Once R is installed, PAST can be installed from [Bioconductor](https://bioconductor.org/packages/release/bioc/html/PAST.html) with the following lines of code in an R Console.
 
 ```r
 if (!requireNamespace("BiocManager", quietly = TRUE))
@@ -17,13 +17,9 @@ if (!requireNamespace("BiocManager", quietly = TRUE))
 BiocManager::install("PAST")
 ```
 
-To install PAST from GitHub, run the following commands in R:
+## Example Data
 
-```R
-install.packages("devtools")
-library("devtools")
-install_github("IGBB/PAST")
-```
+Example data is included in the PAST package (see [Running PAST through R](/running_r)). The data can also be downloaded [here](/assets/example_data.zip). This example data only contains two pathways and is meant to illustrate how PAST works.
 
 ## Citation
 
