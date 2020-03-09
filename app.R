@@ -191,15 +191,15 @@ ui <- dashboardPage(
                 ),
                 box(
                   title = "Begin Analysis", status = "primary", solidHeader = TRUE, width = 3, height = 300,
-                  style = "height:270px; overflow-y: scroll;",
+                  style = "height:250px; overflow-y: scroll;",
                   tags$p("When all parameters have been set, click the button below to begin the analysis. The results of the analysis can be viewed in the Results tab."),
                   br(),
                   actionButton("start_button", "Begin Analysis")
                 ),
                 box(
                   title = "Load Saved Analysis", status = "primary", solidHeader = TRUE, width = 3, height = 300,
-                  style = "height:270px; overflow-y: scroll;",
-                  tags$p("Upload previously downloaded results."),
+                  style = "height:250px; overflow-y: scroll;",
+                  tags$p("Upload previously downloaded results The downloaded file should be unzipped, and the full pathways should be uploaded."),
                   fileInput("results_file", "Results File"),
                   tags$p("Once results have been uploaded, click the button below to view the saved analysis in the Results tab."),
                   br(),
