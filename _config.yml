@@ -22,7 +22,7 @@ title: PAST
 email: thrash@igbb.msstate.edu
 description: >- # this means to ignore newlines until "baseurl:"
   Pathway Association Study Tool
-baseurl: "/" # the subpath of your site, e.g. /blog
+#baseurl: "/" # the subpath of your site, e.g. /blog
 url: "https://igbb.github.io/PAST/" # the base hostname & protocol for your site, e.g. http://example.com
 #twitter_username: jekyllrb
 #github_username:  jekyll

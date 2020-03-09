@@ -19,7 +19,7 @@ BiocManager::install("PAST")
 
 ## Example Data
 
-Example data is included in the PAST package (see [Running PAST through R](/running_r)). The data can also be downloaded [here](/assets/example_data.zip). This example data only contains two pathways and is meant to illustrate how PAST works.
+Example data is included in the PAST package (see [Running PAST through R](running_r)). The data can also be downloaded [here](/assets/example_data.zip). This example data only contains two pathways and is meant to illustrate how PAST works.
 
 ## Citation
 

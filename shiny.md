@@ -6,7 +6,7 @@ title: Running PAST in Shiny
 
 ## Installing
 
-PAST Shiny is available through the Shiny branch of our Github repository. The Shiny application can be downloaded <a href="https://github.com/IGBB/PAST/releases/download/v1.0.0/app.R">here</a> or from the [Releases page](https://github.com/IGBB/PAST/releases/). Once the Shiny application has been downloaded, some dependencies need to be installed. PAST Shiny will attempt to install these dependencies when the application is first run. The progress of the dependency install can be monitored in the R console from which the application was started.
+PAST Shiny is available through the Shiny branch of our Github repository. The Shiny application can be downloaded <a href="https://github.com/IGBB/PAST/releases/download/v1.0.1/app.R">here</a> or from the [Releases page](https://github.com/IGBB/PAST/releases/). Once the Shiny application has been downloaded, some dependencies need to be installed. PAST Shiny will attempt to install these dependencies when the application is first run. The progress of the dependency install can be monitored in the R console from which the application was started.
 
 If the dependencies did not install correctly, they can be installed by the user. In an R Console, run the following line of code to install PAST and its dependencies as well as the dependencies of the PAST Shiny.
 
