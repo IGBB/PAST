@@ -6,7 +6,7 @@ title: Running PAST in Shiny
 
 ## Installing
 
-PAST Shiny is available through the Shiny branch of our Github repository. The Shiny application can be downloaded <a href="data:text/plain;charset=UTF-8,https://raw.githubusercontent.com/IGBB/PAST/shiny/app.R" download>here</a>. Once the Shiny application has been downloaded, some dependencies need to be installed. In an R Console, run the following line of code to install PAST and its dependencies as well as the dependencies of the PAST Shiny.
+PAST Shiny is available through the Shiny branch of our Github repository. The Shiny application can be downloaded <a href="https://github.com/IGBB/PAST/releases/download/v1.0.0/app.R">here</a> or from the [Releases page](https://github.com/IGBB/PAST/releases/). Once the Shiny application has been downloaded, some dependencies need to be installed. In an R Console, run the following line of code to install PAST and its dependencies as well as the dependencies of the PAST Shiny.
 
 ```r
 if (!requireNamespace("BiocManager", quietly = TRUE))
@@ -24,6 +24,6 @@ PAST Shiny can be run easily with two methods. First, PAST Shiny can be run thro
 shiny::runApp('path/to/folder/with/shiny/app.R')
 ```
 
-PAST Shiny can also be run through RStudio. If `app.R` is opened in RStudio, RStudio detects that PAST Shiny is an R Shiny application and provides a "Run App" button at the top of the editor.
+PAST Shiny can also be run through RStudio. If `app.R` is opened in RStudio, RStudio detects that PAST Shiny is an R Shiny application and provides a "Run App" button at the top of the editor. PAST Shiny works best with RStudio 1.2 or higher, as an error in RStudio's browser prevents the results from being downloaded as a ZIP archive.
 
 
