@@ -1,4 +1,18 @@
 ## app.R ##
+packages = c("PAST", "DT", "zip", "shiny", "shinydashboard", "gridExtra")
+for (package in packages){
+  if( !is.element(package, .packages(all.available = TRUE)) ) {
+    if (package == "PAST"){
+      if (!requireNamespace("BiocManager", quietly = TRUE))
+        install.packages("BiocManager")
+      BiocManager::install("PAST")
+    } else {
+      install.packages(package)
+    }
+  }
+  library(package,character.only = TRUE)
+}
+
 library(PAST)
 library(zip)
 library(dplyr)
