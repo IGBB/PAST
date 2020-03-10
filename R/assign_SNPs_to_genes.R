@@ -311,17 +311,17 @@ find_representative_SNP_gene_pairing <- function(chunk) {
 #' example("load_LD")
 #' demo_genes_file = system.file("extdata", "genes.gff",
 #'   package = "PAST", mustWork = TRUE)
-#' genes <-assign_SNPs_to_genes(gwas_data, LD, demo_genes_file, 1000, 0.8, 2)
+#' genes <-assign_SNPs_to_genes(gwas_data, LD, demo_genes_file, filter_type, 1000, 0.8, 2)
 assign_SNPs_to_genes <-
     function(gwas_data,
              LD,
              gff_file,
+             filter_type,
              window,
              r_squared_cutoff,
              num_cores) {
         
-        full_gff <- rtracklayer::readGFF(gff_file) %>%
-            filter(.data$type == "gene") %>%
+        full_gff <- as.data.frame(rtracklayer::readGFF(gff_file, filter=list(type=filter_type))) %>%
             select(.data$seqid,
                    .data$start,
                    .data$end,
