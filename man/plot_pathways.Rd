@@ -4,8 +4,13 @@
 \alias{plot_pathways}
 \title{Plot Rugplots for Selected Pathways}
 \usage{
-plot_pathways(rugplots_data, filter_type, filter_parameter, mode,
-  output_directory)
+plot_pathways(
+  rugplots_data,
+  filter_type,
+  filter_parameter,
+  mode,
+  output_directory
+)
 }
 \arguments{
 \item{rugplots_data}{The data to be plotted (returned from

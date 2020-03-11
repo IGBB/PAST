@@ -4,8 +4,14 @@
 \alias{find_pathway_significance}
 \title{Find Pathway Significance}
 \usage{
-find_pathway_significance(genes, pathways_file, gene_number_cutoff = 5,
-  mode, sample_size = 1000, num_cores)
+find_pathway_significance(
+  genes,
+  pathways_file,
+  gene_number_cutoff = 5,
+  mode,
+  sample_size = 1000,
+  num_cores
+)
 }
 \arguments{
 \item{genes}{Genes from assign_SNPs_to_genes()}

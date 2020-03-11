@@ -4,8 +4,10 @@
 \alias{load_LD}
 \title{Load Linkage Disequilibrium}
 \usage{
-load_LD(LD_file, LD_columns = c("Locus1", "Position1", "Site1",
-  "Position2", "Site2", "Dist_bp", "R.2"))
+load_LD(
+  LD_file,
+  LD_columns = c("Locus1", "Position1", "Site1", "Position2", "Site2", "Dist_bp", "R.2")
+)
 }
 \arguments{
 \item{LD_file}{The file containing linkage disequilibrium data}
