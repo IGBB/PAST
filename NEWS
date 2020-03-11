@@ -74,3 +74,6 @@ Changes in version 1.2.5 (2020-03-10)
 
 Changes in version 1.2.6 (2020-03-11)
 + fixed a warning in plot_pathways
+
+Changes in version 1.2.7 (2020-03-11)
++ brought documentation in line with code
