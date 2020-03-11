@@ -63,8 +63,8 @@ plot_pathways <-
       intercept <- intercept[, 1][1]
       rugplot <-
         ggplot(temp_data,
-               aes(x = temp_data$rank,
-                   y = temp_data$running_enrichment_score)) +
+               aes(x = rank,
+                   y = running_enrichment_score)) +
         geom_line(stat = "identity") +
         geom_rug(sides = "t", position = "jitter") +
         geom_vline(xintercept = intercept,
