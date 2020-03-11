@@ -88,33 +88,7 @@ ui <- dashboardPage(
                   h1("Mode"),
                   tags$p("Select the type of analysis you wish to run. \"Increasing\" searches for pathways associated with an increase in the measured trait, and \"decreasing\" searches for pathways associated with a decrease in the measured trait."),
                   selectInput("mode", NULL,
-                              choices = c("increasing", "decreasing")),
-                  h1("Advanced Options"),
-                  # window size to search for genes
-                  tags$p("PAST searches for genes within 1kb of SNPs by default, but this number can be changed."),
-                  numericInput("window", "Window Size", value = 1000),
-                  
-                  # r^2 for LD
-                  h1("R", tags$sup("2"), " cutoff"),
-                  tags$p(tagList("PAST uses R", tags$sup("2"), " to determine linkage between SNPs.")),
-                  sliderInput(
-                    "r_squared_cutoff",
-                    NULL,
-                    min = 0,
-                    max = 1,
-                    value = 0.8,
-                    step = 0.05
-                  ),
-                  
-                  # minimum number of genes in a pathway
-                  h1("Gene Cutoff"),
-                  tags$p("PAST discards pathways with less than 5 genes by default."),
-                  numericInput("gene_cutoff", NULL, value = 5),
-                  
-                  # number of times to sample effects for generating null distribution
-                  h1("Effects"),
-                  tags$p("PAST determines pathway signficance by creating 1000 random distributions of gene effects and comparing the actual effects to randomly sampled effects."),
-                  numericInput("sample", NULL, value = 1000)
+                              choices = c("increasing", "decreasing"))
                 ),
                 box(
                   title = "GWAS", status = "primary", solidHeader = TRUE, width = 3, height = 300,
@@ -195,13 +169,44 @@ ui <- dashboardPage(
                   title = "Gene Assignment", status = "primary", solidHeader = TRUE, width = 3, height = 300,
                   style = "height:270px; overflow-y: scroll;",
                   tags$p("Upload a GFF3-formatted annotations file. The sequence names in the first column of your annotation must match the locus/chromosome column of your GWAS data."),
-                  fileInput("genes_file", "Genes File")
+                  fileInput("genes_file", "Genes File"),
+                  
+                  h1("Gene Assignment Options"),
+                  
+                  # filter type
+                  tags$p("PAST filters for a specific type of annotation (genes by default), but you may wish to use another feature."),
+                  selectInput("annotation_filter_type", "Annotation Type", selected = "gene",
+                              choices = c("gene", "CDS", "mRNA", "exon")),
+                  
+                  # window size to search for genes
+                  tags$p("PAST searches for genes within 1kb of SNPs by default, but this number can be changed."),
+                  numericInput("window", "Window Size", value = 1000),
+                  
+                  # r^2 for LD
+                  tags$p(tagList("PAST uses R", tags$sup("2"), " to determine linkage between SNPs.")),
+                  sliderInput(
+                    "r_squared_cutoff",
+                    NULL,
+                    min = 0,
+                    max = 1,
+                    value = 0.8,
+                    step = 0.05
+                  )
                 ),
                 box(
                   title = "Pathway Discovery", status = "primary", solidHeader = TRUE, width = 3, height = 300,
                   style = "height:270px; overflow-y: scroll;",
                   tags$p("Upload a file containing your pathway",HTML("&rarr;"),"gene mappings. This file should contain three columns - pathway ID, pathway description, and gene name - separated by tabs."),
                   fileInput("pathway_file", "Pathways File"),
+                  # minimum number of genes in a pathway
+                  h1("Gene Cutoff"),
+                  tags$p("PAST discards pathways with less than 5 genes by default."),
+                  numericInput("gene_cutoff", NULL, value = 5),
+                  
+                  # number of times to sample effects for generating null distribution
+                  h1("Effects"),
+                  tags$p("PAST determines pathway signficance by creating 1000 random distributions of gene effects and comparing the actual effects to randomly sampled effects."),
+                  numericInput("sample", NULL, value = 1000)
                 ),
                 box(
                   title = "Begin Analysis", status = "primary", solidHeader = TRUE, width = 3, height = 300,
@@ -400,9 +405,11 @@ server <- function(input, output, session) {
     window <- input$window
     r_squared_cutoff <- input$r_squared_cutoff
     num_cores <- input$num_cores
+    filter_type = input$annotation_filter_type
     data <- try({assign_SNPs_to_genes(all_data,
                                       LD,
                                       genes_file$datapath,
+                                      c(filter_type),
                                       window,
                                       r_squared_cutoff,
                                       num_cores)
