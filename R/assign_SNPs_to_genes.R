@@ -311,6 +311,7 @@ find_representative_SNP_gene_pairing <- function(chunk) {
 #' example("load_LD")
 #' demo_genes_file = system.file("extdata", "genes.gff",
 #'   package = "PAST", mustWork = TRUE)
+#' filter_type = c("gene")
 #' genes <-assign_SNPs_to_genes(gwas_data, LD, demo_genes_file, filter_type, 1000, 0.8, 2)
 assign_SNPs_to_genes <-
     function(gwas_data,

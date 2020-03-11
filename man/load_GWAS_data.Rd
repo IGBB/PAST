@@ -4,10 +4,12 @@
 \alias{load_GWAS_data}
 \title{Load GWAS data}
 \usage{
-load_GWAS_data(association_file, effects_file,
-  association_columns = c("Trait", "Marker", "Locus", "Site", "p",
-  "marker_R2"), effects_columns = c("Trait", "Marker", "Locus", "Site",
-  "Effect"))
+load_GWAS_data(
+  association_file,
+  effects_file,
+  association_columns = c("Trait", "Marker", "Locus", "Site", "p", "marker_R2"),
+  effects_columns = c("Trait", "Marker", "Locus", "Site", "Effect")
+)
 }
 \arguments{
 \item{association_file}{The association file}

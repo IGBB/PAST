@@ -148,7 +148,8 @@ column should match the chromosomes in your LD data.
 ```{r assigning_SNPs}
 genes <-assign_SNPs_to_genes(gwas_data, 
                              LD, 
-                             demo_genes_file, 
+                             demo_genes_file,
+                             c("gene"),
                              1000, 
                              0.8, 
                              2)

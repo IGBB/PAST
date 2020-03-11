@@ -4,8 +4,15 @@
 \alias{assign_SNPs_to_genes}
 \title{Assign SNPs to genes}
 \usage{
-assign_SNPs_to_genes(gwas_data, LD, gff_file, window, r_squared_cutoff,
-  num_cores)
+assign_SNPs_to_genes(
+  gwas_data,
+  LD,
+  gff_file,
+  filter_type,
+  window,
+  r_squared_cutoff,
+  num_cores
+)
 }
 \arguments{
 \item{gwas_data}{Merged association and effects data from merge_data()}
@@ -31,5 +38,6 @@ example("load_GWAS_data")
 example("load_LD")
 demo_genes_file = system.file("extdata", "genes.gff",
   package = "PAST", mustWork = TRUE)
-genes <-assign_SNPs_to_genes(gwas_data, LD, demo_genes_file, 1000, 0.8, 2)
+filter_type = c("gene")
+genes <-assign_SNPs_to_genes(gwas_data, LD, demo_genes_file, filter_type, 1000, 0.8, 2)
 }
