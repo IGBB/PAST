@@ -21,6 +21,8 @@ assign_SNPs_to_genes(
 
 \item{gff_file}{The path to a GFF file}
 
+\item{filter_type}{filter the GFF on a feature such as gene or mRNA}
+
 \item{window}{The search window for genes around the SNP}
 
 \item{r_squared_cutoff}{The R^2 value used to determine SNP significance}

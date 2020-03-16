@@ -295,6 +295,7 @@ find_representative_SNP_gene_pairing <- function(chunk) {
 #' @param gwas_data Merged association and effects data from merge_data()
 #' @param LD Linkage disequilibrium data from parse_LD()
 #' @param gff_file The path to a GFF file
+#' @param filter_type filter the GFF on a feature such as gene or mRNA
 #' @param window The search window for genes around the SNP
 #' @param r_squared_cutoff The R^2 value used to determine SNP significance
 #' @param num_cores The number of cores to use in parallelizing PAST
