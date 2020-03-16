@@ -77,3 +77,6 @@ Changes in version 1.2.6 (2020-03-11)
 
 Changes in version 1.2.7 (2020-03-11)
 + brought documentation in line with code
+
+Changes in version 1.2.8 (2020-03-16)
++ fixed warnings from missing documentation
