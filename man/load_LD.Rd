@@ -6,7 +6,8 @@
 \usage{
 load_LD(
   LD_file,
-  LD_columns = c("Locus1", "Position1", "Site1", "Position2", "Site2", "Dist_bp", "R.2")
+  LD_columns = c("Locus1", "Position1", "Site1", "Position2", "Site2", "Dist_bp",
+    "R.2")
 )
 }
 \arguments{

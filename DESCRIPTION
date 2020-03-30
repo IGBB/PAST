@@ -29,7 +29,7 @@ Suggests:
     knitr,
     rmarkdown
 VignetteBuilder: knitr
-RoxygenNote: 7.0.2
+RoxygenNote: 7.1.0
 URL: https://github.com/IGBB/past
 BugReports: https://github.com/IGBB/past/issues
 biocViews: Pathways, GeneSetEnrichment
