@@ -241,7 +241,7 @@ assign_chunk <- function(gff, chunk, window) {
             .data$distance,
             .data$start,
             .data$stop
-        )) %>% mutate(name = as.character.factor(.data$name))
+        ))
 }
 
 #' Find the SNP-gene assignment that represents SNPs assigned to a gene
@@ -337,8 +337,7 @@ assign_SNPs_to_genes <-
         
         cl <- parallel::makeCluster(num_cores)
         clusterEvalQ(cl, {library(dplyr); library(GenomicRanges)})
-        # registerDoParallel(cl)
-        
+
         all_genes <- NULL
         
         # UP/DOWNSTREAM LOOP
