@@ -80,3 +80,6 @@ Changes in version 1.2.7 (2020-03-11)
 
 Changes in version 1.2.8 (2020-03-16)
 + fixed warnings from missing documentation
+
+Changes in version 1.4.1 (2020-04-30)
++ bug fixes and new minimum R version

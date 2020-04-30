@@ -1,7 +1,7 @@
 Package: PAST
 Type: Package
 Title: Pathway Association Study Tool (PAST)
-Version: 1.4.0
+Version: 1.4.1
 Authors@R: c(person("Thrash", "Adam", email = "thrash@igbb.msstate.edu",
     role = c("cre", "aut")), person("DeOrnellis", "Mason", role = c("aut")))
 Description: PAST takes GWAS output and assigns SNPs to genes, uses those genes
@@ -11,7 +11,7 @@ Description: PAST takes GWAS output and assigns SNPs to genes, uses those genes
     pathways, and plotting pathways.
 License: GPL (>=3) + file LICENSE
 Encoding: UTF-8
-Depends: R (>= 3.6)
+Depends: R (>= 4.0)
 Imports: stats, 
     utils, 
     dplyr, 
