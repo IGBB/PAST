@@ -464,18 +464,23 @@ assign_SNPs_to_genes <-
                     
                     blocks <- blocks %>% filter(!(is.na(.data$SNP2_effect)))
                     
-                    index <- c(0, cumsum(abs(diff(blocks$Site2)) > 1))
-                    temp_data_list <- split(blocks, 
-                                            paste(blocks$Position1, index))
-                    
-                    temp_data <- parLapply(cl, 
-                                           temp_data_list, 
-                                           find_representative_SNP, 
-                                           r_squared_cutoff = r_squared_cutoff) %>%
+                    if (nrow(blocks == 0)) {
+                      index <- c(0, cumsum(abs(diff(blocks$Site2)) > 1))
+                      temp_data_list <- split(blocks, 
+                                              paste(blocks$Position1, index))
+                      
+                      temp_data <- parLapply(cl, 
+                                             temp_data_list, 
+                                             find_representative_SNP, 
+                                             r_squared_cutoff = r_squared_cutoff) %>%
                         bind_rows()
-                    
-                    temp_data <- rbind(temp_data, linked_to_one, linked_to_none) %>% 
+                      
+                      temp_data <- rbind(temp_data, linked_to_one, linked_to_none) %>% 
                         arrange(.data$Position1)
+                    } else {
+                      temp_data <- rbind(linked_to_one, linked_to_none) %>% 
+                        arrange(.data$Position1)
+                    }
                     
                     split <- 4
                     snp_list <-
