@@ -33,8 +33,7 @@ load_GWAS_data <- function(association_file,
                                                "Effect")) {
 
   stats <- read.table(association_file, header = TRUE, sep = "\t") %>%
-    dplyr::mutate(.data,
-                  Trait = !!as.name(association_columns[1]),
+    dplyr::mutate(Trait = !!as.name(association_columns[1]),
                   Marker_original = !!as.name(association_columns[2]),
                   Chr = !!as.name(association_columns[3]),
                   Pos = !!as.name(association_columns[4]),
@@ -50,8 +49,7 @@ load_GWAS_data <- function(association_file,
                   .data$marker_R2)
 
   effects <- read.table(effects_file, header = TRUE, sep = "\t") %>%
-    dplyr::mutate(.data,
-                  Trait = !!as.name(effects_columns[1]),
+    dplyr::mutate(Trait = !!as.name(effects_columns[1]),
                   Marker_original = !!as.name(effects_columns[2]),
                   Chr = !!as.name(effects_columns[3]),
                   Pos = !!as.name(effects_columns[4]),
