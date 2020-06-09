@@ -79,10 +79,15 @@ ui <- dashboardPage(
                   tags$p("Provide a title for your analysis. This title is used for the downloaded results."),
                   textInput("title", NULL, value = "New Analysis"),
                   
+                  h1("B73 Genome Version"),
+                  selectInput("genome_version",
+                              label = NULL,
+                              choices = list("RefGen_v2","RefGen_v3","RefGen_v4")),
+                  
                   # number of cores
-                  h1("Number of Cores"),
-                  tags$p("Select the number of cores to be used in run your analysis in parallel."),
-                  numericInput("num_cores", NULL, value = 1),
+                  # h1("Number of Cores"),
+                  # tags$p("Select the number of cores to be used in run your analysis in parallel."),
+                  # numericInput("num_cores", NULL, value = 1),
                   
                   # analysis type
                   h1("Mode"),
@@ -168,16 +173,8 @@ ui <- dashboardPage(
                 box(
                   title = "Gene Assignment", status = "primary", solidHeader = TRUE, width = 3, height = 300,
                   style = "height:270px; overflow-y: scroll;",
-                  tags$p("Upload a GFF3-formatted annotations file. The sequence names in the first column of your annotation must match the locus/chromosome column of your GWAS data."),
-                  fileInput("genes_file", "Genes File"),
-                  
                   h1("Gene Assignment Options"),
-                  
-                  # filter type
-                  tags$p("PAST filters for a specific type of annotation (genes by default), but you may wish to use another feature."),
-                  selectInput("annotation_filter_type", "Annotation Type", selected = "gene",
-                              choices = c("gene", "CDS", "mRNA", "exon")),
-                  
+
                   # window size to search for genes
                   tags$p("PAST searches for genes within 1kb of SNPs by default, but this number can be changed."),
                   numericInput("window", "Window Size", value = 1000),
@@ -196,8 +193,6 @@ ui <- dashboardPage(
                 box(
                   title = "Pathway Discovery", status = "primary", solidHeader = TRUE, width = 3, height = 300,
                   style = "height:270px; overflow-y: scroll;",
-                  tags$p("Upload a file containing your pathway",HTML("&rarr;"),"gene mappings. This file should contain three columns - pathway ID, pathway description, and gene name - separated by tabs."),
-                  fileInput("pathway_file", "Pathways File"),
                   # minimum number of genes in a pathway
                   h1("Gene Cutoff"),
                   tags$p("PAST discards pathways with less than 5 genes by default."),
@@ -399,16 +394,24 @@ server <- function(input, output, session) {
   assign_genes <- reactive({
     all_data <- get_gwas_data()
     LD <- get_LD()
-    genes_file <- input$genes_file
-    if (is.null(genes_file) | is.null(LD))
+    if (input$genome_version == "RefGen_v2") {
+      gene_file_path <- "./data/Gene_model_files/Refgen_v2_gene_models.gff"
+    } else if (input$genome_version == "RefGen_v3") {
+      gene_file_path <- "./data/Gene_model_files/Refgen_v3_gene_models.gff"
+    } else {
+      gene_file_path <- "./data/Gene_model_files/Refgen_v4_gene_models.gff"
+    }
+    
+    if (is.null(gene_file_path) | is.null(LD))
       return(NULL)
     window <- input$window
     r_squared_cutoff <- input$r_squared_cutoff
-    num_cores <- input$num_cores
-    filter_type = input$annotation_filter_type
+    # num_cores <- input$num_cores
+    num_cores <- 8
+    filter_type = "gene"
     data <- try({assign_SNPs_to_genes(all_data,
                                       LD,
-                                      genes_file$datapath,
+                                      gene_file_path,
                                       c(filter_type),
                                       window,
                                       r_squared_cutoff,
@@ -419,16 +422,23 @@ server <- function(input, output, session) {
   
   find_pathways <- reactive({
     genes <- assign_genes()
-    pathway_file <- input$pathway_file
-    if (is.null(pathway_file) | is.null(genes))
+    if (input$genome_version == "RefGen_v2") {
+      pathway_file_path <- "./data/Pathway_files/Refgen_v2_pathways.txt"
+    } else if (input$genome_version == "RefGen_v3") {
+      pathway_file_path <- "./data/Pathway_files/Refgen_v3_pathways.txt"
+    } else {
+      pathway_file_path <- "./data/Pathway_files/Refgen_v4_pathways.txt"
+    }
+    if (is.null(pathway_file_path) | is.null(genes))
       return(NULL)
     gene_cutoff <- input$gene_cutoff
     mode <- input$mode
     sample <- input$sample
-    num_cores <- input$num_cores
+    # num_cores <- input$num_cores
+    num_cores <- 8
     
     data <- try({find_pathway_significance(genes,
-                                           pathway_file$datapath,
+                                           pathway_file_path,
                                            gene_cutoff,
                                            mode,
                                            sample,
@@ -503,7 +513,7 @@ server <- function(input, output, session) {
           genes,
           br(),
           tags$b("Annotations File Column Names: "),
-          read.table(input$genes_file$datapath, nrows = 1, colClasses = "character", header = F)
+          read.table(gene_file_path, nrows = 1, colClasses = "character", header = F)
         ))
         return(NULL);
       }
@@ -524,7 +534,7 @@ server <- function(input, output, session) {
           pathways,
           br(),
           tags$b("Pathways File Column Names: "),
-          read.table(input$pathway_file$datapath, nrows = 1, colClasses = "character", header = F)
+          read.table(pathway_file_path, nrows = 1, colClasses = "character", header = F)
         ))
         return(NULL);
       }
@@ -835,5 +845,6 @@ server <- function(input, output, session) {
     contentType = "application/zip"
   )
 }
+
 
 shinyApp(ui, server)
