@@ -152,8 +152,7 @@ assign_chunk <- function(gff, chunk, window) {
                       .data$effect,
                       .data$p.value,
                       .data$distance,
-                      .data$linked_snp_count,
-                      .data$Marker_original
+                      .data$linked_snp_count
         )
     
     # handle unlinked SNPs
@@ -216,10 +215,8 @@ assign_chunk <- function(gff, chunk, window) {
                                                         .data$SNP1_pvalue,
                                                         .data$SNP2_pvalue))
     ) %>%
-        dplyr::mutate(marker = .data$Marker_original) %>%
         dplyr::select(.data$chromosome,
                       .data$position,
-                      .data$marker,
                       .data$effect,
                       .data$p.value,
                       .data$distance,
@@ -337,7 +334,7 @@ assign_SNPs_to_genes <-
         
         cl <- parallel::makeCluster(num_cores)
         clusterEvalQ(cl, {library(dplyr); library(GenomicRanges)})
-
+        
         all_genes <- NULL
         
         # UP/DOWNSTREAM LOOP
@@ -413,8 +410,7 @@ assign_SNPs_to_genes <-
                             .data$Marker1,
                             .data$SNP1_pvalue,
                             .data$SNP1_effect,
-                            .data$Marker2,
-                            .data$Marker_original
+                            .data$Marker2
                         )
                     
                     # look up p-value and effect data for SNP2
@@ -425,8 +421,7 @@ assign_SNPs_to_genes <-
                               all.y = TRUE) %>%
                         dplyr::mutate(Marker2 = .data$Marker,
                                       SNP2_pvalue = .data$p,
-                                      SNP2_effect = .data$Effect.x,
-                                      Marker_original = .data$Marker_original.x) %>%
+                                      SNP2_effect = .data$Effect.x) %>%
                         dplyr::select(
                             .data$Locus,
                             .data$Position1,
@@ -440,13 +435,12 @@ assign_SNPs_to_genes <-
                             .data$SNP1_effect,
                             .data$Marker2,
                             .data$SNP2_pvalue,
-                            .data$SNP2_effect,
-                            .data$Marker_original
+                            .data$SNP2_effect
                         ) %>%
                         dplyr::arrange(.data$Position1)
                     
                     singles = temp_data %>% dplyr::group_by(.data$Marker1) %>%
-                        dplyr::summarise(count = n()) %>%
+                        dplyr::summarise(count = n(), .groups = "drop_last") %>%
                         dplyr::filter(count == 1)
                     
                     linked_to_one <- temp_data %>% 
@@ -465,21 +459,21 @@ assign_SNPs_to_genes <-
                     blocks <- blocks %>% filter(!(is.na(.data$SNP2_effect)))
                     
                     if (nrow(blocks == 0)) {
-                      index <- c(0, cumsum(abs(diff(blocks$Site2)) > 1))
-                      temp_data_list <- split(blocks, 
-                                              paste(blocks$Position1, index))
-                      
-                      temp_data <- parLapply(cl, 
-                                             temp_data_list, 
-                                             find_representative_SNP, 
-                                             r_squared_cutoff = r_squared_cutoff) %>%
-                        bind_rows()
-                      
-                      temp_data <- rbind(temp_data, linked_to_one, linked_to_none) %>% 
-                        arrange(.data$Position1)
+                        index <- c(0, cumsum(abs(diff(blocks$Site2)) > 1))
+                        temp_data_list <- split(blocks, 
+                                                paste(blocks$Position1, index))
+                        
+                        temp_data <- parLapply(cl, 
+                                               temp_data_list, 
+                                               find_representative_SNP, 
+                                               r_squared_cutoff = r_squared_cutoff) %>%
+                            bind_rows()
+                        
+                        temp_data <- rbind(temp_data, linked_to_one, linked_to_none) %>% 
+                            arrange(.data$Position1)
                     } else {
-                      temp_data <- rbind(linked_to_one, linked_to_none) %>% 
-                        arrange(.data$Position1)
+                        temp_data <- rbind(linked_to_one, linked_to_none) %>% 
+                            arrange(.data$Position1)
                     }
                     
                     split <- 4
@@ -515,5 +509,15 @@ assign_SNPs_to_genes <-
                                          find_representative_SNP_gene_pairing) %>%
             bind_rows()
         stopCluster(cl)
-        representative_genes
+        representative_genes <- merge(representative_genes %>% mutate(Marker = paste0(chromosome, "_", position)),
+                                      gwas_data, 
+                                      by = "Marker"
+        ) %>% select(marker = Marker_original,
+                     chromosome,
+                     position,
+                     effect,
+                     p.value,
+                     linked_snp_count,
+                     name) %>% 
+            arrange(marker)
     }
