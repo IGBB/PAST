@@ -1,310 +1,224 @@
-## app.R ##
-packages = c("PAST", "DT", "zip", "shiny", "shinydashboard", "gridExtra")
-for (package in packages){
-  if( !is.element(package, .packages(all.available = TRUE)) ) {
-    if (package == "PAST"){
-      if (!requireNamespace("BiocManager", quietly = TRUE))
-        install.packages("BiocManager")
-      BiocManager::install("PAST")
-    } else {
-      install.packages(package)
-    }
-  }
-  library(package,character.only = TRUE)
-}
-
 library(PAST)
-library(zip)
-library(dplyr)
-library(ggplot2)
 library(shiny)
-library(shinydashboard)
-library(gridExtra)
+library(shinythemes)
+library(shinyjs) 
+library(DT)
+library(dplyr)
+library(rtracklayer)
+library(ggplot2)
+library(plotly)
 
-ui <- dashboardPage(
-  dashboardHeader(title = "PAST"),
-  dashboardSidebar(
-    sidebarMenu(id = "tabs",
-                menuItem("Input", tabName = "input", icon = icon("file-upload")),
-                menuItem("Results", tabName = "results", icon = icon("table"))
-    )
+# Define UI for application that draws a histogram
+ui <- bootstrapPage(
+  useShinyjs(),
+  tags$head(
+    tags$style(HTML("hr {border-top: 1px solid #95a5a6 !important} .action-button {margin: 5px;}"))
   ),
-  dashboardBody(
-    tags$head(tags$style(HTML('
-      .box {
-      overflow-y: hidden;
-      }
-      .box h1 {
-        font-size: 1.2em;
-        font-weight: bold;
-      }
-      .shiny-input-container, .shiny-file-input-progress {
-        margin-bottom: 0;
-      }
-      .shiny-notification {
-        height: 100%;
-        width: 100%;
-        position:fixed;
-        top: 0;
-        left: 0;
-        font-size: 250%;
-        text-align: center;
-        background-color: rgba(0, 0, 0, 0.9);
-        color: #FFFFFF;
-      }
-      .shiny-notification-content {
-        margin-top: 50vh;
-        margin-left: auto;
-        margin-right: auto;
-        width: 75%;
-      }
-      .shiny-notification-close {
-      display: none;
-      }
-      .h1, .h2, .h3, h1, h2, h3 {
-      margin-top: 0px !important;
-      }
-      .form-group {
-      margin: 10px 0;
-      }
-    '))),
-    tabItems(
-      # First tab content
-      tabItem(tabName = "input",
-              fluidRow(
-                box(
-                  title = "Analysis Options", status = "primary", solidHeader = TRUE, width = 3, height = 300,
-                  style = "height:270px; overflow-y: scroll;",
-                  h1("Analysis Title"),
-                  tags$p("Provide a title for your analysis. This title is used for the downloaded results."),
-                  textInput("title", NULL, value = "New Analysis"),
-                  
-                  # number of cores
-                  h1("Number of Cores"),
-                  tags$p("Select the number of cores to be used in run your analysis in parallel."),
-                  numericInput("num_cores", NULL, value = 1),
-                  
-                  # analysis type
-                  h1("Mode"),
-                  tags$p("Select the type of analysis you wish to run. \"Increasing\" searches for pathways associated with an increase in the measured trait, and \"decreasing\" searches for pathways associated with a decrease in the measured trait."),
-                  selectInput("mode", NULL,
-                              choices = c("increasing", "decreasing")),
-                  
-                  #input type
-                  h1("Input Type"),
-                  tags$p("Select the type of GWAS data you have. \"Single\" has all the data in a single file, \"Two-file\" has separate associations and effects data with one line per marker in each file, and \"TASSEL\" has separate associations data with one line per markers and effects data with two lines per marker."),
-                  selectInput("input_type", NULL,
-                              choices = c("single", "two-file", "TASSEL"))
-                ),
-                box(
-                  title = "GWAS", status = "primary", solidHeader = TRUE, width = 3, height = 300,
-                  style = "height:270px; overflow-y: scroll;",
-                  h1("Files"),
-                  tags$p("Upload file/files containing a single trait. These files can be compressed with BZIP, GZIP, or XZ compression."),
-                  uiOutput("fileBox1"),
-                  uiOutput("fileBox2"),
-                  h1("Column Names"),
-                  tags$p("The column names below must match the column names of your data."),
-                  textInput("association_trait",
-                            "Trait Column Name",
-                            value = "Trait"),
-                  textInput("association_marker",
-                            "Marker Column Name",
-                            value = "Marker"),
-                  textInput("association_locus",
-                            "Locus Column Name",
-                            value = "Locus"),
-                  textInput("association_site",
-                            "Site Column Name",
-                            value = "Site"),
-                  textInput("association_p",
-                            "P-value Column Name",
-                            value = "p"),
-                  textInput("association_marker_R2",
-                            tagList("Marker R", tags$sup("2"), " Column Name"),
-                            value = "marker_R2"),
-                  textInput("effects_effect",
-                            "Effect Column Name",
-                            value = "Effect")
-                ),
-                box(
-                  title = "Linkage Disequilibrium", status = "primary", solidHeader = TRUE, width = 3, height = 300,
-                  style = "height:270px; overflow-y: scroll;",
-                  tags$p("Upload the linkage disequilibrium file. This file can be compressed with BZIP, GZIP, or XZ compression."),
-                  fileInput("LD_file", "Linkage Disequilibrium File"),
-                  h1("LD Column Names"),
-                  tags$p("The column names below must match the column names of your data."),
-                  textInput("LD_locus_1",
-                            "Locus1 Column Name",
-                            value = "Locus1"),
-                  textInput("LD_position_1",
-                            "Position1 Column Name",
-                            value = "Position1"),
-                  textInput("LD_site_1",
-                            "Site1 Column Name",
-                            value = "Site1"),
-                  textInput("LD_position_2",
-                            "Position2 Column Name",
-                            value = "Position2"),
-                  textInput("LD_site_2",
-                            "Site2 Column Name",
-                            value = "Site2"),
-                  textInput("LD_distance",
-                            "Distance Column Name",
-                            value = "Dist_bp"),
-                  textInput("LD_R2",
-                            "Effect Column Name",
-                            value = "R.2")
-                ),
-                box(
-                  title = "Gene Assignment", status = "primary", solidHeader = TRUE, width = 3, height = 300,
-                  style = "height:270px; overflow-y: scroll;",
-                  tags$p("Upload a GFF3-formatted annotations file. The sequence names in the first column of your annotation must match the locus/chromosome column of your GWAS data."),
-                  fileInput("genes_file", "Genes File"),
-                  
-                  h1("Gene Assignment Options"),
-                  
-                  # filter type
-                  tags$p("PAST filters for a specific type of annotation (genes by default), but you may wish to use another feature."),
-                  selectInput("annotation_filter_type", "Annotation Type", selected = "gene",
-                              choices = c("gene", "CDS", "mRNA", "exon")),
-                  
-                  # window size to search for genes
-                  tags$p("PAST searches for genes within 1kb of SNPs by default, but this number can be changed."),
-                  numericInput("window", "Window Size", value = 1000),
-                  
-                  # r^2 for LD
-                  tags$p(tagList("PAST uses R", tags$sup("2"), " to determine linkage between SNPs.")),
-                  sliderInput(
-                    "r_squared_cutoff",
-                    NULL,
-                    min = 0,
-                    max = 1,
-                    value = 0.8,
-                    step = 0.05
-                  )
-                ),
-                box(
-                  title = "Pathway Discovery", status = "primary", solidHeader = TRUE, width = 3, height = 300,
-                  style = "height:270px; overflow-y: scroll;",
-                  tags$p("Upload a file containing your pathway",HTML("&rarr;"),"gene mappings. This file should contain three columns - pathway ID, pathway description, and gene name - separated by tabs."),
-                  fileInput("pathway_file", "Pathways File"),
-                  # minimum number of genes in a pathway
-                  h1("Gene Cutoff"),
-                  tags$p("PAST discards pathways with less than 5 genes by default."),
-                  numericInput("gene_cutoff", NULL, value = 5),
-                  
-                  # number of times to sample effects for generating null distribution
-                  h1("Effects"),
-                  tags$p("PAST determines pathway signficance by creating 1000 random distributions of gene effects and comparing the actual effects to randomly sampled effects."),
-                  numericInput("sample", NULL, value = 1000)
-                ),
-                box(
-                  title = "Begin Analysis", status = "primary", solidHeader = TRUE, width = 3, height = 300,
-                  style = "height:250px; overflow-y: scroll;",
-                  tags$p("When all parameters have been set, click the button below to begin the analysis. The results of the analysis can be viewed in the Results tab."),
-                  br(),
-                  actionButton("start_button", "Begin Analysis")
-                ),
-                box(
-                  title = "Load Saved Analysis", status = "primary", solidHeader = TRUE, width = 3, height = 300,
-                  style = "height:250px; overflow-y: scroll;",
-                  tags$p("Upload previously downloaded results The downloaded file should be unzipped, and the full pathways should be uploaded."),
-                  fileInput("results_file", "Results File"),
-                  tags$p("Once results have been uploaded, click the button below to view the saved analysis in the Results tab."),
-                  br(),
-                  actionButton("plot_button", "View Saved Results")
-                ),
-                box(
-                  title = "About PAST", status = "primary", solidHeader = TRUE, width = 3, height = 300,
-                  style = "height:270px; overflow-y: scroll;",
-                  h1("Please cite us if you use PAST."),
-                  tags$p(tagList("Thrash A, Tang JD, DeOrnellis M, Peterson DG, Warburton ML (2020). “PAST: The Pathway Association Studies Tool to Infer Biological Meaning from GWAS Datasets.” Plants, 9(1), 58.",
-                                 tags$a(href="https://doi.org/10.3390/plants9010058", "https://doi.org/10.3390/plants9010058")
-                  )),
-                  h1("Report an Issue"),
-                  tags$p(tags$a("https://github.com/IGBB/PAST/issues")),
-                  h1("Full Documentation"),
-                  tags$p(tags$a("https://igbb.github.io/PAST/"))
-                )
-              )
-      ),
-      
-      # Second tab content
-      tabItem(tabName = "results",
-              
-              column(width = 4,
-                     fluidRow(
-                       box(
-                         title = "Filtering", status = "primary", solidHeader = TRUE, width=12, height = 300,
-                         style = "height:270px;overflow-y: scroll;",
-                         # create a selector for filtering type
-                         "Choose your method of filtering the results.",
-                         selectInput(
-                           "filter_type",
-                           "Filter Parameter:",
-                           choices = c("p-value", "q-value"),
-                           selected = "p-value"
-                         ),
-                         
-                         
-                         "Select the value used for filtering results.",
-                         # create a slider to specify filtering level
-                         sliderInput(
-                           "significance_cutoff",
-                           "Pathway Signficance Filter",
-                           min = 0,
-                           max = 0.3,
-                           value = 0.05,
-                           step = 0.01
-                         )
-                       )
-                     ),
-                     # create the table view
-                     fluidRow(
-                       box(
-                         title = textOutput("box_title_table"), width=12,
-                         status = "primary",
-                         solidHeader = TRUE,
-                         DT::dataTableOutput("pathways"),
-                         style = "height:calc(82vh - 320px);overflow-y: scroll;"
-                       )
-                     )
-              ),
-              
-              # create the graph view
-              box(
-                title = textOutput("box_title_plot"),
-                status = "primary",
-                color = "red",
-                solidHeader = TRUE,
-                width = 8,
-                plotOutput("plots", height = "auto"),
-                style = "height:82vh; overflow-y: scroll;"
-              ),
-              
-              # add the download button
-              uiOutput("download_button")
-              
-      )
+  navbarPage(
+    theme = shinytheme("flatly"), 
+    collapsible = TRUE,
+    
+    # Application title
+    "PAST",
+    
+    # Sidebar with a slider input for number of bins 
+    tabPanel("GWAS Input",
+             sidebarLayout(
+               sidebarPanel(
+                 width = 4,
+                 h3("Input Type"),
+                 tags$p("Select the type of GWAS data you have. \"Single\" has all the data in a single file, \"Two\" has separate associations and effects data with one line per marker in each file, and \"TASSEL\" has separate associations data with one line per markers and effects data with two lines per marker."),
+                 selectInput("input_type", NULL,
+                             choices = c("single", "two", "TASSEL")),
+                 
+                 uiOutput("file_header"),
+                 uiOutput("file_text"),
+                 uiOutput("file_association_upload"),
+                 uiOutput("association_error_text"),
+                 uiOutput("file_effects_upload"),
+                 uiOutput("effects_error_text"),
+                 
+                 hr(),
+                 uiOutput("gwas_column_names")
+               ),
+               
+               # Show a plot of the generated distribution
+               mainPanel(
+                 DTOutput("gwas_data")
+               )
+             )
+    ),
+    
+    tabPanel("LD Input",
+             sidebarLayout(
+               sidebarPanel(
+                 width = 4,
+                 h3("File"),
+                 tags$p("Upload the linkage disequilibrium file. This file can be compressed with BZIP, GZIP, or XZ compression."),
+                 fileInput("LD_file", "Linkage Disequilibrium File"),
+                 uiOutput("LD_error_text"),
+                 hr(),
+                 h3("Column Names"),
+                 tags$p("Load your data and select the appropriate column for each name."),
+                 uiOutput("LD_column_names")
+               ),
+               
+               # Show a plot of the generated distribution
+               mainPanel(
+                 DTOutput("LD_data")
+               )
+             )
+    ),
+    
+    tabPanel("Annotations Input",
+             sidebarLayout(
+               sidebarPanel(
+                 width = 4,
+                 h3("File"),
+                 tags$p("Upload the uncompressed annotation file in GFF3 format."),
+                 fileInput("genes_file", "Genes File"),
+                 uiOutput("genes_error_text"),
+                 hr(),
+                 h3("Options"),
+                 tags$p("PAST searches for genes within 1kb of SNPs by default, but this number can be changed."),
+                 numericInput("window", "Window Size", value = 1000),
+                 tags$p(tagList("PAST uses R", tags$sup("2"), " to determine linkage between SNPs.")),
+                 sliderInput(
+                   "r_squared_cutoff",
+                   NULL,
+                   min = 0,
+                   max = 1,
+                   value = 0.8,
+                   step = 0.05
+                 ),
+                 tags$p("PAST filters for a specific type of annotation (genes by default), but you may wish to use another feature."),
+                 selectInput("annotation_filter_type", "Annotation Type", selected = "gene",
+                             choices = c("gene", "CDS", "mRNA", "exon"))
+               ),
+               
+               # Show a plot of the generated distribution
+               mainPanel(
+                 DTOutput("genes_data")
+               )
+             )
+    ),
+    
+    tabPanel("Pathways Input",
+             sidebarLayout(
+               sidebarPanel(
+                 width = 4,
+                 h3("File"),
+                 tags$p("Upload the pathways file in TSV format. This file can be compressed with BZIP, GZIP, or XZ compression."),
+                 fileInput("pathways_file", "Pathways File"),
+                 uiOutput("pathways_error_text"),
+                 hr(),
+                 
+                 h3("Gene Cutoff"),
+                 tags$p("PAST discards pathways with less than 5 genes by default."),
+                 numericInput("gene_cutoff", NULL, value = 5),
+                 
+                 h3("Sampling"),
+                 tags$p("PAST determines pathway signficance by creating random distributions of gene effects and comparing the actual effects to randomly sampled effects."),
+                 numericInput("sample", NULL, value = 1000),
+               ),
+               
+               # Show a plot of the generated distribution
+               mainPanel(
+                 DTOutput("pathways_data")
+               )
+             )
+    ),
+    
+    tabPanel("Analysis",
+             sidebarLayout(
+               sidebarPanel(
+                 width = 4,
+                 h3("Analysis Title"),
+                 tags$p("Provide a title for your analysis. This title is used for the downloaded results."),
+                 textInput("title", NULL, value = "New Analysis"),
+                 
+                 h3("Number of Cores"),
+                 tags$p("Select the number of cores to be used in run your analysis in parallel."),
+                 selectInput("num_cores", NULL, choices=seq(1, parallel::detectCores(TRUE))),
+                 
+                 h3("Mode"),
+                 tags$p("Select the type of analysis you wish to run. \"Increasing\" searches for pathways associated with an increase in the measured trait, and \"decreasing\" searches for pathways associated with a decrease in the measured trait."),
+                 selectInput("mode", NULL,
+                             choices = c("increasing", "decreasing")),
+                 
+                 actionButton("begin_genes_analysis", "Begin SNP-gene Assignment"),
+                 actionButton("begin_pathways_analysis", "Begin Pathways Analysis"),
+                 hr(),
+                 h3("Filtering"),
+                 tags$p("Choose your method of filtering the results."),
+                 selectInput(
+                   "filter_type",
+                   "Filter Parameter:",
+                   choices = c("p-value", "q-value"),
+                   selected = "p-value"
+                 ),
+                 
+                 
+                 tags$p("Select the value used for filtering results."),
+                 # create a slider to specify filtering level
+                 sliderInput(
+                   "significance_cutoff",
+                   "Pathway Signficance Filter",
+                   min = 0,
+                   max = 1.0,
+                   value = 0.05,
+                   step = 0.01
+                 ),
+               ),
+               
+               # Show a plot of the generated distribution
+               mainPanel(
+                 tabsetPanel(type = "pills",
+                             tabPanel("SNP-gene Assignments", DTOutput("snp_gene_results")),
+                             tabPanel("Pathways", 
+                                      fluidRow(
+                                        column(6,
+                                               DTOutput("pathways_results") 
+                                        ),
+                                        column(6,
+                                               uiOutput("pathway_select"),
+                                               plotlyOutput("pathway_plot"),
+                                               DTOutput("pathway_genes") 
+                                        )
+                                      )
+                             )
+                 )
+               )
+             )
     )
   )
 )
 
-server <- function(input, output, session) {
+# Define server logic required to draw a histogram
+server <- function(input, output) {
   options(shiny.maxRequestSize = 600 * 1024 ^ 2)
-  # output$title <- renderText({
-  #   input$title
-  # })
   
-  analysis_type <- reactiveVal(NULL)
-  output$download_button <- renderUI({
-    req(analysis_type()) # requires readfile to be non-null before running code below
-    downloadButton("download_data",
-                   "Download Results",
-                   style = "margin-left: 15px")  })
+  ## GWAS Data
   
-  output$fileBox1 <- renderUI({
+  uploaded_files = reactiveValues()
+  
+  output$file_header <- renderUI({
+    if (input$input_type == "single") {
+      return(h3("File"))
+    } else {
+      return(h3("Files"))
+    }
+  })
+  
+  output$file_text <- renderUI({
+    if (input$input_type == "single") {
+      return(tags$p("Upload a file containing a single trait. These files can be compressed with BZIP, GZIP, or XZ compression."))
+    } else {
+      return(tags$p("Upload files containing a single trait. These files can be compressed with BZIP, GZIP, or XZ compression."))
+    }
+  })
+  
+  output$file_association_upload <- renderUI({
     if (input$input_type == "single") {
       return(fileInput("association_file", "GWAS Data File"))
     } else {
@@ -312,76 +226,338 @@ server <- function(input, output, session) {
     }
   })
   
-  output$fileBox2 <- renderUI({
+  output$file_effects_upload <- renderUI({
     if (input$input_type == "single") {
       return(NULL)
     } else {
       return(fileInput("effects_file", "Effects File"))
     }
   })
-  # set the table box title based on whether we are doing a new analysis
-  # or loading saved data
-  output$box_title_table <- renderText({
-    if (is.null(analysis_type())) {
-      return("Pathways")
-    }
-    if (analysis_type() == "new") {
-      return(paste0(input$mode, " Pathways"))
-    }
-    else if (analysis_type() == "saved"){
-      return(paste0(input$results_file$name, " Pathways"))
-    }
+  
+  observeEvent(input$association_file, {
+    uploaded_files$association_file=input$association_file$datapath
+    uploaded_files$effects_file=NULL
+    reset("effects_file")
   })
   
-  # set the plot box title based on whether we are doing a new analysis
-  # or loading saved data
-  output$box_title_plot <- renderText({
-    if (is.null(analysis_type())) {
-      return("Plots")
-    }
-    if (analysis_type() == "new") {
-      return(paste0(input$mode, " plots"))
-    }
-    else if (analysis_type() == "new"){
-      return(paste0(input$results_file$name, " plots"))
+  observeEvent(input$effects_file, {
+    uploaded_files$effects_file=input$effects_file$datapath
+  })
+  
+  observeEvent(input$input_type, {
+    uploaded_files$association_file = NULL
+    uploaded_files$effects_file = NULL
+    output$association_error_text <- renderUI(NULL)
+    output$effects_error_text <- renderUI(NULL)
+    reset('association_file')
+    reset('effects_file')
+  })
+  
+  association_columns = reactive({
+    if (is.null(uploaded_files$association_file))
+      return(NULL)
+    
+    tryCatch({
+      output$association_error_text <- renderUI(NULL)
+      return(names(read.table(uploaded_files$association_file, sep = "\t", header = T, nrows = 2)))
+    }, error = function(e) {
+      output$association_error_text <- renderUI({
+        span(h4(paste0("Error reading file: ", input$association_file$name)),
+             p(e$message), 
+             style="color:red"
+        )
+      })
+      reset('association_file')
+      uploaded_files$association_file = NULL
+      return(NULL)
+    })
+  })
+  
+  effects_columns = reactive({
+    if (is.null(uploaded_files$effects_file))
+      return(NULL)
+    
+    tryCatch({
+      output$effects_error_text <- renderUI(NULL)
+      return(names(read.table(uploaded_files$effects_file, sep = "\t", header = T, nrows = 2)))
+    }, error = function(e) {
+      output$effects_error_text <- renderUI({
+        span(h4(paste0("Error reading file: ", input$effects_file$name)),
+             p(e$message), 
+             style="color:red"
+        )
+      })
+      reset('effects_file')
+      uploaded_files$effects_file = NULL
+    })
+    
+  })
+  
+  output$gwas_column_names <- renderUI({
+    if (input$input_type == "single") {
+      return(
+        div(
+          h3("Column Names"),
+          tags$p("Load your data and select the appropriate column for each name."),
+          selectInput("association_trait",
+                      tags$b("Trait Name"),
+                      selected = NULL,
+                      choices = association_columns()),
+          selectInput("association_marker",
+                      tags$b("Marker Column Name"),
+                      selected = NULL,
+                      choices = association_columns()),
+          selectInput("association_locus",
+                      tags$b("Locus/Chromosome Column Name"),
+                      choices = association_columns()),
+          selectInput("association_site",
+                      tags$b("Site/Position Column Name"),
+                      choices = association_columns()),
+          selectInput("association_p",
+                      tags$b("P-value Column Name"),
+                      choices = association_columns()),
+          selectInput("association_marker_R2",
+                      tags$b(tagList("Marker R", tags$sup("2"), " Column Name")),
+                      choices = association_columns()),
+          selectInput("association_effect",
+                      tags$b("Effect Column Name"),
+                      choices = association_columns())
+        )
+      )
     } else {
-      return("plots")
+      return(
+        div(
+          h3("Association Column Names"),
+          tags$p("Load your data and select the appropriate column for each name."),
+          selectInput("association_trait",
+                      tags$b("Trait Name"),
+                      selected = NULL,
+                      choices = association_columns()),
+          selectInput("association_marker",
+                      tags$b("Marker Column Name"),
+                      selected = NULL,
+                      choices = association_columns()),
+          selectInput("association_locus",
+                      tags$b("Locus/Chromosome Column Name"),
+                      choices = association_columns()),
+          selectInput("association_site",
+                      tags$b("Site/Position Column Name"),
+                      choices = association_columns()),
+          selectInput("association_p",
+                      tags$b("P-value Column Name"),
+                      choices = association_columns()),
+          selectInput("association_marker_R2",
+                      tags$b(tagList("Marker R", tags$sup("2"), " Column Name")),
+                      choices = association_columns()),
+          hr(),
+          h3("Effects Column Names"),
+          tags$p("Load your data and select the appropriate column for each name."),
+          selectInput("effects_trait",
+                      tags$b("Trait Name"),
+                      selected = NULL,
+                      choices = effects_columns()),
+          selectInput("effects_marker",
+                      tags$b("Marker Column Name"),
+                      selected = NULL,
+                      choices = effects_columns()),
+          selectInput("effects_locus",
+                      tags$b("Locus/Chromosome Column Name"),
+                      choices = effects_columns()),
+          selectInput("effects_site",
+                      tags$b("Site/Position Column Name"),
+                      choices = effects_columns()),
+          selectInput("effects_effect",
+                      tags$b("Effect Column Name"),
+                      choices = effects_columns())
+        )
+      )
     }
+    
   })
   
-  # get GWAS data
   get_gwas_data <- reactive({
-    association_file <- input$association_file
-    effects_file <- input$effects_file
+    update_progress <- function(message = NULL, value = NULL, detail = NULL) {
+      progress$set(message = message, value = value, detail = detail)
+    }
+    if (input$input_type == "single") {
+      if (is.null(uploaded_files$association_file))
+        return(NULL)
+      input_files = c(uploaded_files$association_file)
+    } else {
+      effects_file <- uploaded_files$effects_file
+      if (is.null(uploaded_files$association_file) | is.null(uploaded_files$effects_file))
+        return(NULL)
+      input_files = c(uploaded_files$association_file, uploaded_files$effects_file)
+    }
     
     if (input$input_type == "single") {
-      if (is.null(association_file))
+      column_set = list(input$association_trait,
+                        input$association_marker,
+                        input$association_locus,
+                        input$association_site,
+                        input$association_p,
+                        input$association_marker_R2,
+                        input$association_effect)
+      
+      if (sum(vapply(column_set, is.null, TRUE) != 0) | length(column_set %>% unique) != 7)
         return(NULL)
-      input_files = c(association_file$datapath)
+      
+      
+      tryCatch({
+        progress <- shiny::Progress$new(min = 0, max = 1)
+        data <- load_GWAS_data(
+          input_files,
+          input$association_trait,
+          input$association_marker,
+          input$association_locus,
+          input$association_site,
+          input$association_p,
+          input$association_marker_R2,
+          input$association_effect,
+          input$input_type,
+          update_progress = update_progress)
+        progress$close()
+        return(data)
+      }, error = function(e) {
+        showModal(modalDialog(
+          title = "Error in parsing GWAS data",
+          e$message,
+        ))
+        return(NULL)
+      })
+      
+      
     } else {
-      if (is.null(association_file) | is.null(effects_file))
+      association_column_set = list(input$association_trait,
+                                    input$association_marker,
+                                    input$association_locus,
+                                    input$association_site,
+                                    input$association_p,
+                                    input$association_marker_R2)
+      
+      effects_column_set = list(input$effects_effect,
+                                input$effects_trait,
+                                input$effects_marker,
+                                input$effects_locus,
+                                input$effects_site)
+      
+      if (sum(vapply(association_column_set, is.null, TRUE) != 0) | 
+          sum(vapply(effects_column_set, is.null, TRUE) != 0) | 
+          length(association_column_set %>% unique) != 6 | 
+          length(effects_column_set %>% unique) != 5)
         return(NULL)
-      input_files = c(association_file$datapath, effects_file$datapath)
+      
+      tryCatch({
+        progress <- shiny::Progress$new(min = 0, max = 1)
+        data <- load_GWAS_data(
+          input_files,
+          input$association_trait,
+          input$association_marker,
+          input$association_locus,
+          input$association_site,
+          input$association_p,
+          input$association_marker_R2,
+          input$effects_effect,
+          input$input_type,
+          input$effects_trait,
+          input$effects_marker,
+          input$effects_locus,
+          input$effects_site,
+          update_progress = update_progress)
+        progress$close()
+        return(data)
+      }, error = function(e) {
+        showModal(modalDialog(
+          title = "Error in parsing GWAS data",
+          e$message,
+        ))
+        return(NULL)
+      })
+      
     }
-    
-    data <- try(load_GWAS_data(
-      input_files,
-      input$association_trait,
-      input$association_marker,
-      input$association_locus,
-      input$association_site,
-      input$association_p,
-      input$association_marker_R2,
-      input$effects_effect,
-      input$input_type
-    ))
-    data
   })
   
-  # load the LD data
-  get_LD <- reactive({
-    LD_file <- input$LD_file
-    if (is.null(LD_file))
+  output$gwas_data <- renderDT({
+    if(!(is.null(get_gwas_data()))) {
+      datatable(get_gwas_data(), rownames = FALSE)
+    } else {
+      return(NULL)
+    }
+  })
+  
+  ## Linkage Disequilibrium Data
+  
+  observeEvent(input$LD_file, {
+    uploaded_files$LD_file=input$LD_file$datapath
+  })
+  
+  LD_columns = reactive({
+    if (is.null(uploaded_files$LD_file))
+      return(NULL)
+    
+    tryCatch({
+      output$LD_error_text <- renderUI(NULL)
+      return(names(read.table(uploaded_files$LD_file, sep = "\t", header = T, nrows = 2)))
+    }, error = function(e) {
+      message("ERROR in LD file")
+      output$LD_error_text <- renderUI({
+        span(h4(paste0("Error reading file: ", input$LD_file$name)),
+             p(e$message), 
+             style="color:red"
+        )
+      })
+      reset('LD_file')
+      uploaded_files$LD_file = NULL
+      return(NULL)
+    })
+  })
+  
+  output$LD_column_names <- renderUI({
+    div(
+      selectInput("LD_locus_1", 
+                  tags$b("Locus1 Column Name"),
+                  selected = NULL,
+                  choices = LD_columns()),
+      selectInput("LD_position_1", 
+                  tags$b("Position1 Column Name"),
+                  selected = NULL,
+                  choices = LD_columns()),
+      selectInput("LD_site_1", 
+                  tags$b("Site1 Column Name"), 
+                  choices = LD_columns()),
+      selectInput("LD_position_2", 
+                  tags$b("Position2 Column Name"),
+                  selected = NULL,
+                  choices = LD_columns()),
+      selectInput("LD_site_2", 
+                  tags$b("Site2 Column Name"), 
+                  choices = LD_columns()),
+      selectInput("LD_distance", 
+                  tags$b("Distance Column Name"), 
+                  choices = LD_columns()),
+      selectInput("LD_R2", 
+                  tags$b("R2 Column Name"), 
+                  choices = LD_columns())
+    )
+  })
+  
+  get_LD_data <- reactive({
+    update_progress <- function(message = NULL, value = NULL, detail = NULL) {
+      progress$set(message = message, value = value, detail = detail)
+    }
+    
+    if (is.null(uploaded_files$LD_file))
+      return(NULL)
+    
+    column_set = list(input$LD_locus_1,
+                      input$LD_position_1,
+                      input$LD_site_1,
+                      input$LD_position_2,
+                      input$LD_site_2,
+                      input$LD_distance,
+                      input$LD_R2)
+    
+    if (sum(vapply(column_set, is.null, TRUE) != 0) | length(column_set %>% unique) != 7)
       return(NULL)
     LD_columns = c(
       input$LD_locus_1,
@@ -392,454 +568,282 @@ server <- function(input, output, session) {
       input$LD_distance,
       input$LD_R2
     )
-    data <- try({load_LD(LD_file$datapath, LD_columns)})
-    data
+    LD_columns
     
-  })
-  
-  # assign SNPs to genes
-  assign_genes <- reactive({
-    all_data <- get_gwas_data()
-    LD <- get_LD()
-    genes_file <- input$genes_file
-    if (is.null(genes_file) | is.null(LD))
-      return(NULL)
-    window <- input$window
-    r_squared_cutoff <- input$r_squared_cutoff
-    num_cores <- input$num_cores
-    filter_type = input$annotation_filter_type
-    data <- try({assign_SNPs_to_genes(all_data,
-                                      LD,
-                                      genes_file$datapath,
-                                      c(filter_type),
-                                      window,
-                                      r_squared_cutoff,
-                                      num_cores)
-    })
-    data
-  })
-  
-  find_pathways <- reactive({
-    genes <- assign_genes()
-    pathway_file <- input$pathway_file
-    if (is.null(pathway_file) | is.null(genes))
-      return(NULL)
-    gene_cutoff <- input$gene_cutoff
-    mode <- input$mode
-    sample <- input$sample
-    num_cores <- input$num_cores
-    
-    data <- try({find_pathway_significance(genes,
-                                           pathway_file$datapath,
-                                           gene_cutoff,
-                                           mode,
-                                           sample,
-                                           num_cores)
-    })
-    data
-    
-    
-  })
-  
-  observeEvent(input$start_button, {
-    analysis_type("new")
-    withProgress(message = 'Beginning analysis', value = 0,detail="0%", {
-      
-      # load GWAS
-      gwas_data <- get_gwas_data()
-      if (is.null(gwas_data)) {
-        showModal(modalDialog(
-          title = "Error",
-          "Something went wrong loading your GWAS data. Please make sure your files exist and that the uploads were allowed to complete.",
-        ))
-        return(NULL);
-      } else if (class(gwas_data) == "try-error"){
-        showModal(modalDialog(
-          title = "Error",
-          "Something went wrong loading your GWAS data. Please check that the column names match the names provided in the GWAS options.",
-          gwas_data,
-          br(),
-          tags$b("Association File Column Names: "),
-          read.table(input$association_file$datapath, nrows = 1, colClasses = "character", header = F),
-          br(),
-          tags$b("Effects File Column Names: "),
-          read.table(input$effects_file$datapath, nrows = 1, colClasses = "character", header = F),
-        ))
-        return(NULL);
-      }
-      incProgress(1/4,detail = paste0(25,"%"), message = "Loaded GWAS data")
-      
-      # load LD
-      LD_data <- get_LD()
-      if (is.null(LD_data)) {
-        showModal(modalDialog(
-          title = "Error",
-          "Something went wrong loading your LD data. Please make sure your file exists and that the upload was allowed to complete.",
-        ))
-        return(NULL);
-      } else if (class(LD_data) == "try-error"){
-        showModal(modalDialog(
-          title = "Error",
-          "Something went wrong loading your LD data. Please check that the column names match the names provided in the GWAS options.",
-          LD_data,
-          br(),
-          tags$b("LD File Column Names: "),
-          read.table(input$LD_file$datapath, nrows = 1, colClasses = "character", header = F)
-        ))
-        return(NULL);
-      }
-      incProgress(1/4,detail = paste0(50,"%"), message = "Loaded LD data")
-      
-      # assign genes to SNPs
-      genes <- assign_genes()
-      if (is.null(genes)) {
-        showModal(modalDialog(
-          title = "Error",
-          "Something went wrong loading your annotation data. Please make sure your file exists and that the upload was allowed to complete.",
-        ))
-        return(NULL);
-      } else if (class(genes) == "try-error"){
-        showModal(modalDialog(
-          title = "Error",
-          "Something went wrong while assigning SNPs to genes. Please make sure your annotations are correct and that the first column matches the chromosome/locus of GWAS and LD data.",
-          genes,
-          br(),
-          tags$b("Annotations File Column Names: "),
-          read.table(input$genes_file$datapath, nrows = 1, colClasses = "character", header = F)
-        ))
-        return(NULL);
-      }
-      incProgress(1/4,detail = paste0(75,"%"), message = "Assigned SNPs to genes")
-      
-      # find pathways
-      pathways <- find_pathways()
-      if (is.null(pathways)) {
-        showModal(modalDialog(
-          title = "Error",
-          "Something went wrong loading your pathways data. Please make sure your file exists and that the upload was allowed to complete.",
-        ))
-        return(NULL);
-      } else if (class(pathways) == "try-error"){
-        showModal(modalDialog(
-          title = "Error",
-          "Something went wrong assigning genes to pathways. Please make sure that the gene names in your annotations file match the gene names in your pathways file.",
-          pathways,
-          br(),
-          tags$b("Pathways File Column Names: "),
-          read.table(input$pathway_file$datapath, nrows = 1, colClasses = "character", header = F)
-        ))
-        return(NULL);
-      }
-      incProgress(1/4,detail = paste0(100,"%"), message = "Discovered significant pathways")
-      newtab <- switch(input$tabs, "input" = "results")
-      updateTabItems(session, "tabs", newtab)
-      
-    })
-  })
-  
-  # load pathway sifnificance data from file
-  load_pathways_from_file <- reactive({
-    pathway_file <- input$results_file
-    if (is.null(pathway_file))
-      return(NULL)
-    data <- try({read.table(pathway_file$datapath, header = TRUE, sep = "\t")})
-    if (class(data) != "try-error"){
-      data
-    } else {
-      NULL
-    }
-  })
-  
-  observeEvent(input$plot_button, {
-    analysis_type("saved")
-    # find pathways
-    pathways <- load_pathways_from_file()
-    if(is.null(pathways)) {
+    tryCatch({
+      progress <- shiny::Progress$new(min = 0, max = 1)
+      data = load_LD(uploaded_files$LD_file, 
+                     LD_columns, 
+                     update_progress = update_progress)
+      progress$close()
+      return(data)
+    }, error = function(e) {
+      reset('LD_file')
       showModal(modalDialog(
-        title = "Error",
-        "Something went wrong loading your data. Please make sure your pathways file is correct."
+        title = "Error parsing LD file",
+        e$message,
       ))
-      return(NULL);
-    }      
-    newtab <- switch(input$tabs, "input" = "results")
-    updateTabItems(session, "tabs", newtab)
+      return(NULL)
+    })
+    
   })
   
-  # render pathway table
-  output$pathways <- DT::renderDataTable({
-    # determine source of data based on analysis type
-    if (analysis_type() == "new") {
-      pathways <- find_pathways()
-    } else {
-      pathways <- load_pathways_from_file()
+  output$LD_data <- renderDT({
+    if (is.null(get_LD_data()))
+      return(NULL)
+    data = NULL
+    for (chromosome in names(get_LD_data())) {
+      data = rbind(data, slice_sample(get_LD_data()[[chromosome]], prop = 0.01))
     }
-    
-    # get filter and cut-off
-    filter_type <- input$filter_type
-    significance_cutoff <- input$significance_cutoff
-    if (is.null(pathways))
+    datatable(data %>% dplyr::arrange(), rownames = FALSE)
+  })
+  
+  ## Genes Data
+  
+  observeEvent(input$genes_file, {
+    uploaded_files$genes_file=input$genes_file$datapath
+  })
+  
+  get_genes_data <- reactive({
+    if (is.null(uploaded_files$genes_file))
       return(NULL)
     
+    tryCatch({
+      output$genes_error_text <- renderUI(NULL)
+      return(as.data.frame(rtracklayer::readGFF(uploaded_files$genes_file, 
+                                                filter=list(type=input$annotation_filter_type))))
+    }, error = function(e) {
+      output$genes_error_text <- renderUI({
+        span(h4(paste0("Error reading file: ", input$genes_file$name)),
+             p(e$message), 
+             style="color:red"
+        )
+      })
+      reset('genes_file')
+      uploaded_files$genes_file = NULL
+      return(NULL)
+    })
+  })
+  
+  output$genes_data <- renderDT({
+    if(!(is.null(get_genes_data()))) {
+      datatable(get_genes_data(), rownames = FALSE)
+    } else {
+      return(NULL)
+    }
+  })
+  
+  ## Pathways Data
+  
+  observeEvent(input$pathways_file, {
+    uploaded_files$pathways_file=input$pathways_file$datapath
+  })
+  
+  get_pathways_data <- reactive({
+    
+    if (is.null(uploaded_files$pathways_file))
+      return(NULL)
+    
+    tryCatch({
+      output$pathways_error_text <- renderUI(NULL)
+      data = read.table(uploaded_files$pathways_file, sep = "\t", header = T, quote = "")
+    }, error = function(e) {
+      output$pathways_error_text <- renderUI({
+        span(h4(paste0("Error reading file: ", input$pathways_file$name)),
+             p(e$message), 
+             style="color:red"
+        )
+      })
+      reset('pathways_file')
+      uploaded_files$pathways_file = NULL
+      return(NULL)
+    })
+    
+    if (length(data) != 3) {
+      output$pathways_error_text <- renderUI({
+        span(h4(paste0("Error reading file: ", input$pathways_file$name)),
+             p("The pathways file should have three tab-separated columns -- pathway_id, pathway_name, and gene -- with one line for every gene in the pathway."), 
+             style="color:red"
+        )
+      })
+      reset('pathways_file')
+      uploaded_files$pathways_file = NULL
+      return(NULL)
+    }
+    data  
+  })
+  
+  output$pathways_data <- renderDT({
+    if(!(is.null(get_pathways_data()))) {
+      datatable(get_pathways_data(), rownames = FALSE)
+    } else {
+      return(NULL)
+    }
+  })
+  
+  ## Analysis
+  
+  results = reactiveValues()
+  
+  observe({
+    toggleState("begin_genes_analysis", !(is.null(get_genes_data()) | is.null(get_LD_data()) | is.null(get_gwas_data())))
+  })
+  
+  observe({
+    toggleState("begin_pathways_analysis", !(is.null(get_pathways_data()) | is.null(results$gene_assignments)))
+  })
+  
+  observeEvent(input$begin_genes_analysis, {
+    update_progress <- function(message = NULL, value = NULL, detail = NULL) {
+      progress$set(message = message, value = value, detail = detail)
+    }
+    
+    if (is.null(get_genes_data()) | 
+        is.null(get_LD_data()) | 
+        is.null(get_gwas_data()))
+      return(NULL)
+    
+    disable("begin_genes_analysis")
+    disable("begin_pathways_analysis")
+    
+    progress <- shiny::Progress$new(min = 0, max = 1)
+    update_progress(message = "Assigning SNPs to genes", value = 0, "0%")
+    results$gene_assignments <- assign_SNPs_to_genes(get_gwas_data(),
+                                                     get_LD_data(),
+                                                     get_genes_data(),
+                                                     c(input$annotation_filter_type),
+                                                     input$window,
+                                                     input$r_squared_cutoff,
+                                                     as.numeric(input$num_cores),
+                                                     update_progress = update_progress
+    )
+    progress$close()
+    
+    enable("begin_genes_analysis")
+    enable("begin_pathways_analysis")
+    output$snp_gene_results <- renderDT(datatable(results$gene_assignments, rownames = FALSE))
+  })
+  
+  observeEvent(input$begin_pathways_analysis, {
+    update_progress <- function(message = NULL, value = NULL, detail = NULL) {
+      progress$set(message = message, value = value, detail = detail)
+    }
+    if (is.null(get_pathways_data()) | is.null(results$gene_assignments))
+      return(NULL)
+    progress <- shiny::Progress$new(min = 0, max = 1)
+    update_progress(message = "Beginning pathways analysis", value = 0, "0%")
+    results$pathways_assignments <- find_pathway_significance(results$gene_assignments,
+                                                              get_pathways_data(),
+                                                              input$gene_cutoff,
+                                                              input$mode,
+                                                              input$sample,
+                                                              as.numeric(input$num_cores),
+                                                              update_progress = update_progress
+    )
+    progress$close()
     filter_var = ifelse(input$filter_type == "p-value", "pvalue", "qvalue")
-    
-    # get the pathway, pathway name, p-value, and q-value
-    pathways <- pathways %>%
-      dplyr::select(.data$pathway_id, .data$pathway_name, as.name(filter_var)) %>%
-      unique()
-    
-    # filter pathways
-    if (filter_type == "p-value") {
-      pathways <- dplyr::filter(pathways, pvalue < significance_cutoff)
+    if (is.null(results$pathways_assignments))
+      return(NULL)
+    if (input$filter_type == "p-value") {
+      results$pathways <- dplyr::filter(results$pathways_assignments, pvalue < input$significance_cutoff)
     } else {
-      pathways <- dplyr::filter(pathways, qvalue < significance_cutoff)
+      results$pathways <- dplyr::filter(results$pathways_assignments, qvalue < input$significance_cutoff)
     }
-    
-    # render data table without paging and no rownames
-    DT::datatable(pathways,
-                  rownames = FALSE,
-                  options = list(paging = FALSE))
   })
   
-  # render plots
-  output$plots <- renderPlot({
-    # determine source of data based on analysis type
-    if (is.null(analysis_type())) {
+  observeEvent(c(input$filter_type, input$significance_cutoff), {
+    filter_var = ifelse(input$filter_type == "p-value", "pvalue", "qvalue")
+    if (is.null(results$pathways_assignments))
       return(NULL)
-    }
-    if (analysis_type() == "new") {
-      pathways <- find_pathways()
+    if (input$filter_type == "p-value") {
+      results$pathways <- dplyr::filter(results$pathways_assignments, pvalue < input$significance_cutoff)
     } else {
-      pathways <- load_pathways_from_file()
+      results$pathways <- dplyr::filter(results$pathways_assignments, qvalue < input$significance_cutoff)
     }
-    
-    # get filter and cut-off
-    filter_type <- input$filter_type
-    significance_cutoff <- input$significance_cutoff
-    if (is.null(pathways))
-      return(NULL)
-    # filter pathways
-    rugplots_data <-
-      pathways %>% dplyr::arrange(.data$pathway_number)
-    if (filter_type == "p-value") {
-      rugplots_data <- dplyr::filter(rugplots_data,
-                                     pvalue < significance_cutoff)
-    } else {
-      rugplots_data <- dplyr::filter(rugplots_data,
-                                     qvalue < significance_cutoff)
-    }
-    
-    # split rugplots data into a list of pathways
-    rugplots_split <-
-      split(rugplots_data, rugplots_data$pathway_number)
-    
-    # set up a list to store plot instructions
-    plots_list <- list()
-    
-    # for each pathway, draw rugplot
-    for (rank in names(rugplots_split)) {
-      # get data
-      temp_data <- rugplots_split[[rank]]
-      
-      # title is "PWY-ID - Pathway Description"
-      title <- paste0(unique(as.character(temp_data$pathway_id)),
-                      " - ",
-                      unique(as.character(temp_data$pathway_name)))
-      
-      # intercept should be at rank of maximum enrichment score
-      intercept <- temp_data %>%
-        dplyr::arrange(desc(.data$running_enrichment_score)) %>%
-        dplyr::select(.data$rank)
-      intercept <- intercept[, 1][1]
-      
-      # set up the rugplot
-      rugplot <-
-        ggplot(temp_data, aes(x = rank, y = running_enrichment_score)) +
-        geom_line(stat = "identity") +
-        geom_rug(sides = "t", position = "jitter") +
-        geom_vline(xintercept = intercept,
-                   color = "black",
-                   linetype = "longdash") +
-        ggtitle(title) +
-        labs(x = "Gene Rank", y = "Running Enrichment Score") +
-        scale_x_continuous(breaks = c(0, 5000, 10000, 15000, 20000, 25000)) +
-        theme(
-          axis.text = element_text (color = "black"),
-          panel.background = element_rect (color = "black", fill = "pink")
-        )
-      
-      # store the rugplot in the list
-      plots_list[[rank]] <- rugplot
-    }
-    
-    # draw a blank if no rugplots were plotted, otherwise, draw rugplots in grid
-    if (nrow(rugplots_data) == 0) {
-      ggplot() + geom_blank()
-    } else {
-      columns <- floor(sqrt(length(plots_list)))
-      do.call("grid.arrange", c(plots_list, ncol = columns))
-    }
-  } # complicated way to set the height based on the number of columns
-  , height = reactive({
-    # get number of pathways being plotted
-    if (analysis_type() == "new") {
-      pathways <- find_pathways()
-    } else {
-      pathways <- load_pathways_from_file()
-    }
-    
-    # filter
-    filter_type <- input$filter_type
-    significance_cutoff <- input$significance_cutoff
-    
-    # return 100 if there are no pathways to keep the function from breaking
-    if (is.null(pathways))
-      return(100)
-    
-    # get rugplots data for column calculation
-    rugplots_data <-
-      pathways %>% dplyr::arrange(.data$pathway_number)
-    if (filter_type == "p-value") {
-      rugplots_data <- dplyr::filter(rugplots_data,
-                                     pvalue < significance_cutoff)
-    } else {
-      rugplots_data <- dplyr::filter(rugplots_data,
-                                     qvalue < significance_cutoff)
-    }
-    
-    # return 100 if there are no pathways to keep the function from breaking
-    if (nrow(rugplots_data) == 0)
-      return(100)
-    
-    # split rugplots data into a list of pathways
-    rugplots_split <-
-      split(rugplots_data, rugplots_data$pathway_number)
-    
-    # get number of columns
-    columns <- floor(sqrt(length(names(rugplots_split))))
-    
-    # return height
-    return(length(names(rugplots_split)) / columns * 200)
-    
-  }))
+  })
   
-  # download handler
-  output$download_data <- downloadHandler(
-    # make filename = analysis_title.zip
-    filename = function() {
-      paste(input$title, "zip", sep = ".")
-    },
-    # set up content
-    content = function(filename) {
-      # get filter type and cutoff
-      filter_type <- input$filter_type
-      significance_cutoff <- input$significance_cutoff
-      
-      # set up empty vector of files and move to tempdir()
-      fs <- c()
-      setwd(tempdir())
-      
-      # get pathway significance data based on analysis type
-      # R Shiny will either calculate this if something has changed or use
-      # what's already on the screen in most cases
-      if (analysis_type() == "new") {
-        pathways <- find_pathways()
-      } else {
-        pathways <- load_pathways_from_file()
-      }
-      
-      # write full pathways file
-      write.table(pathways, paste0(input$title, ".pathways.tsv"), sep = "\t", quote = F, row.names = F)
-      
-      # filter pathways
-      if (filter_type == "p-value") {
-        filtered_pathways <- dplyr::filter(pathways,
-                                           pvalue < significance_cutoff)
-      } else {
-        filtered_pathways <- dplyr::filter(pathways,
-                                           qvalue < significance_cutoff)
-      }
-      
-      # write filtered pathways file
-      write.table(filtered_pathways,
-                  paste0(input$title, ".pathways.filtered.tsv"),
-                  quote = F,
-                  row.names = F,
-                  sep = "\t")
-      
-      # store pathways files
-      fs <-
-        c(
-          paste0(input$title, ".pathways.tsv"),
-          paste0(input$title, ".pathways.filtered.tsv")
-        )
-      
-      # break until we have pathways information
-      if (is.null(pathways))
-        return(NULL)
-      
-      # set up rugplots by arranged by pathway_number and filtering
-      rugplots_data <-
-        pathways %>% dplyr::arrange(.data$pathway_number)
-      if (filter_type == "p-value") {
-        rugplots_data <- dplyr::filter(rugplots_data,
-                                       pvalue < significance_cutoff)
-      } else {
-        rugplots_data <- dplyr::filter(rugplots_data,
-                                       qvalue < significance_cutoff)
-      }
-      
-      # split based on pathway number
-      rugplots_split <-
-        split(rugplots_data, rugplots_data$pathway_number)
-      
-      # for each pathway, draw rugplot
-      for (rank in names(rugplots_split)) {
-        # get data
-        temp_data <- rugplots_split[[rank]]
-        
-        # title is "PWY-ID - Pathway Description"
-        title <- paste0(unique(as.character(temp_data$pathway_id)),
-                        " - ",
-                        unique(as.character(temp_data$pathway_name)))
-        
-        # intercept should be at rank of maximum enrichment score
-        intercept <-
-          temp_data %>% dplyr::arrange(desc(.data$running_enrichment_score)) %>%
-          dplyr::select(rank)
-        intercept <- intercept[, 1][1]
-        
-        # set up the rugplot
-        rugplot <-
-          ggplot(temp_data, aes(x = rank, y = running_enrichment_score)) +
-          geom_line(stat = "identity") +
-          geom_rug(sides = "t", position = "jitter") +
-          geom_vline(xintercept = intercept,
-                     color = "black",
-                     linetype = "longdash") +
-          ggtitle(title) +
-          labs(x = "Gene Rank", y = "Running Enrichment Score") +
-          scale_x_continuous(breaks = c(0, 5000, 10000, 15000, 20000, 25000)) +
-          theme(
-            axis.text = element_text (color = "black"),
-            panel.background = element_rect (color = "black", fill = "pink")
-          )
-        
-        # set up the output path for the rugplot
-        path <- paste0(input$title,
-                       ".",
-                       unique(as.character(temp_data$pathway_id)),
-                       ".png")
-        
-        # add the rugplot to the files to be zipped and save it in tempdir()
-        fs <- c(fs, path)
-        ggsave(path, rugplot)
-      }
-      
-      # zip the file using the name and files specified earlier
-      zipr(zipfile = filename, files = fs)
-    },
-    contentType = "application/zip"
-  )
+  output$pathway_select <- renderUI({
+    if (is.null(results$pathways))
+      return(NULL)
+    selectInput("pathway_display", 
+                "Select pathway to display", 
+                choices = results$pathways$pathway_id %>% unique())
+  })
+  
+  output$pathway_plot <- renderPlotly({
+    if (is.null(results$pathways))
+      return(NULL)
+    
+    if (nrow(results$pathways) == 0 | length(input$pathway_display) == 0)
+      return(NULL)
+    
+    pathway_data = results$pathways %>% filter(pathway_id == input$pathway_display)
+    title <-
+      paste0(unique(as.character(pathway_data$pathway_id)), " - ",
+             unique(as.character(pathway_data$pathway_name)))
+    intercept <- pathway_data %>%
+      dplyr::arrange(desc(.data$running_enrichment_score)) %>%
+      dplyr::select(.data$rank)
+    intercept <- intercept[, 1][1]
+    rugplot <-
+      ggplot(pathway_data,
+             aes(x = rank,
+                 y = running_enrichment_score,
+                 label = gene_id)) +
+      geom_line(stat = "identity", color = "#fe4365") +
+      geom_rug(sides = "t", color = "#fe4365") +
+      geom_vline(xintercept = intercept,
+                 color = "red",
+                 linetype = "longdash") +
+      ggtitle(title) +
+      geom_text(alpha = 0.0) + 
+      labs(x = "Gene Rank", y = "Running Enrichment Score") +
+      theme_minimal() + 
+      theme(
+        axis.text = element_text (color = "#a1a1a1"),
+        plot.background = element_rect (color = "#a1a1a1", fill = "#222831"),
+        panel.background = element_rect (color = "#a1a1a1", fill = "#222831"),
+        plot.title = element_text(color = "#a1a1a1"),
+        axis.title = element_text(color = "#a1a1a1"),
+        panel.grid.minor = element_blank()
+      )
+    ggplotly(rugplot)
+  })
+  
+  output$pathway_genes <- renderDT({
+    filter_var = ifelse(input$filter_type == "p-value", "pvalue", "qvalue")
+    if (is.null(results$pathways))
+      return(NULL)
+    
+    if (nrow(results$pathways) == 0 | length(input$pathway_display) == 0)
+      return(NULL)
+    
+    datatable(results$pathways %>% 
+                filter(pathway_id == input$pathway_display) %>%
+                mutate(across(c(pvalue, qvalue, running_enrichment_score), round, 3)) %>%
+                select(gene_id,
+                       rank,
+                       running_enrichment_score,
+                       as.name(filter_var)),
+              rownames = FALSE)
+    
+  })
+  
+  output$pathways_results <- renderDT({
+    filter_var = ifelse(input$filter_type == "p-value", "pvalue", "qvalue")
+    if (is.null(results$pathways))
+      return(NULL)
+    if (nrow(results$pathways) == 0)
+      return(NULL)
+    datatable(results$pathways %>%
+                dplyr::mutate(across(c(pvalue, qvalue), round, 3)) %>%
+                dplyr::select(.data$pathway_id, 
+                              .data$pathway_name, 
+                              as.name(filter_var)) %>%
+                unique(),
+              rownames = FALSE)
+  })
 }
 
-shinyApp(ui, server)
+# Run the application 
+shinyApp(ui = ui, server = server)
