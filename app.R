@@ -7,9 +7,12 @@ library(dplyr)
 library(rtracklayer)
 library(ggplot2)
 library(plotly)
+library(sparkline)
+library(tibble)
+library(zip)
 
 # Define UI for application that draws a histogram
-ui <- bootstrapPage(
+ui <- tagList(bootstrapPage(
   useShinyjs(),
   tags$head(
     tags$style(HTML("hr {border-top: 1px solid #95a5a6 !important} .action-button {margin: 5px;}"))
@@ -136,18 +139,8 @@ ui <- bootstrapPage(
                  h3("Analysis Title"),
                  tags$p("Provide a title for your analysis. This title is used for the downloaded results."),
                  textInput("title", NULL, value = "New Analysis"),
-                 
-                 h3("Number of Cores"),
-                 tags$p("Select the number of cores to be used in run your analysis in parallel."),
-                 selectInput("num_cores", NULL, choices=seq(1, parallel::detectCores(TRUE))),
-                 
-                 h3("Mode"),
-                 tags$p("Select the type of analysis you wish to run. \"Increasing\" searches for pathways associated with an increase in the measured trait, and \"decreasing\" searches for pathways associated with a decrease in the measured trait."),
-                 selectInput("mode", NULL,
-                             choices = c("increasing", "decreasing")),
-                 
-                 actionButton("begin_genes_analysis", "Begin SNP-gene Assignment"),
-                 actionButton("begin_pathways_analysis", "Begin Pathways Analysis"),
+                 selectInput("analysis_type", "Analysis Type", choices=c("New", "Saved")),
+                 uiOutput("analysis_options"),
                  hr(),
                  h3("Filtering"),
                  tags$p("Choose your method of filtering the results."),
@@ -169,6 +162,7 @@ ui <- bootstrapPage(
                    value = 0.05,
                    step = 0.01
                  ),
+                 uiOutput("download_button_output")
                ),
                
                # Show a plot of the generated distribution
@@ -192,6 +186,8 @@ ui <- bootstrapPage(
              )
     )
   )
+), 
+htmlwidgets::getDependency("sparkline", "sparkline")
 )
 
 # Define server logic required to draw a histogram
@@ -685,6 +681,29 @@ server <- function(input, output) {
   
   results = reactiveValues()
   
+  output$analysis_options <- renderUI({
+    if (input$analysis_type == "New") {
+      return(div(h3("Number of Cores"),
+                 tags$p("Select the number of cores to be used in run your analysis in parallel."),
+                 selectInput("num_cores", NULL, choices=seq(1, parallel::detectCores(TRUE))),
+                 
+                 h3("Mode"),
+                 tags$p("Select the type of analysis you wish to run. \"Increasing\" searches for pathways associated with an increase in the measured trait, and \"decreasing\" searches for pathways associated with a decrease in the measured trait."),
+                 selectInput("mode", NULL,
+                             choices = c("increasing", "decreasing")),
+                 
+                 actionButton("begin_genes_analysis", "Begin SNP-gene Assignment"),
+                 actionButton("begin_pathways_analysis", "Begin Pathways Analysis")))
+    } else {
+      return(div(
+        fileInput("SNP_genes_file", "SNP-gene Assignments"),
+        fileInput("pathways_results_file", "Pathways Results"),
+      )
+      )
+    }
+    
+  })
+  
   observe({
     toggleState("begin_genes_analysis", !(is.null(get_genes_data()) | is.null(get_LD_data()) | is.null(get_gwas_data())))
   })
@@ -721,7 +740,62 @@ server <- function(input, output) {
     
     enable("begin_genes_analysis")
     enable("begin_pathways_analysis")
-    output$snp_gene_results <- renderDT(datatable(results$gene_assignments, rownames = FALSE))
+    
+    output$snp_gene_results <- renderDT(results$gene_assignments,
+                                        server = FALSE,
+                                        extensions = "Buttons",
+                                        options = list(
+                                          paging = TRUE,
+                                          searching = TRUE,
+                                          ordering = TRUE,
+                                          dom = 'ftpB',
+                                          rownames = FALSE,
+                                          buttons = list(
+                                            list(extend = "csv", text = "Download CSV Results", filename = paste0(input$title, ".SNP-gene.csv"),
+                                                 exportOptions = list(
+                                                   modifier = list(page = "all")
+                                                 )
+                                            ),
+                                            list(extend = "excel", text = "Download Excel Results", filename = paste0(input$title, ".SNP-gene.xls"),
+                                                 exportOptions = list(
+                                                   modifier = list(page = "all")
+                                                 )
+                                            )
+                                          )
+                                        ),
+                                        rownames = FALSE
+    )
+  })
+  
+  observeEvent(input$SNP_genes_file, {
+    results$gene_assignments <- read.table(input$SNP_genes_file$datapath,
+                                           sep = "\t",
+                                           header = T)
+    
+    output$snp_gene_results <- renderDT(results$gene_assignments,
+                                        server = FALSE,
+                                        extensions = "Buttons",
+                                        options = list(
+                                          paging = TRUE,
+                                          searching = TRUE,
+                                          ordering = TRUE,
+                                          dom = 'ftpB',
+                                          rownames = FALSE,
+                                          buttons = list(
+                                            list(extend = "csv", text = "Download CSV Results", filename = paste0(input$title, ".SNP-gene.csv"),
+                                                 exportOptions = list(
+                                                   modifier = list(page = "all")
+                                                 )
+                                            ),
+                                            list(extend = "excel", text = "Download Excel Results", filename = paste0(input$title, ".SNP-gene.xls"),
+                                                 exportOptions = list(
+                                                   modifier = list(page = "all")
+                                                 )
+                                            )
+                                          )
+                                        ),
+                                        rownames = FALSE
+    )
   })
   
   observeEvent(input$begin_pathways_analysis, {
@@ -741,6 +815,20 @@ server <- function(input, output) {
                                                               update_progress = update_progress
     )
     progress$close()
+    filter_var = ifelse(input$filter_type == "p-value", "pvalue", "qvalue")
+    if (is.null(results$pathways_assignments))
+      return(NULL)
+    if (input$filter_type == "p-value") {
+      results$pathways <- dplyr::filter(results$pathways_assignments, pvalue < input$significance_cutoff)
+    } else {
+      results$pathways <- dplyr::filter(results$pathways_assignments, qvalue < input$significance_cutoff)
+    }
+  })
+  
+  observeEvent(input$pathways_results_file, {
+    results$pathways_assignments <- read.table(input$pathways_results_file$datapath,
+                                               sep = "\t",
+                                               header = T)
     filter_var = ifelse(input$filter_type == "p-value", "pvalue", "qvalue")
     if (is.null(results$pathways_assignments))
       return(NULL)
@@ -818,15 +906,71 @@ server <- function(input, output) {
     if (nrow(results$pathways) == 0 | length(input$pathway_display) == 0)
       return(NULL)
     
-    datatable(results$pathways %>% 
-                filter(pathway_id == input$pathway_display) %>%
-                mutate(across(c(pvalue, qvalue, running_enrichment_score), round, 3)) %>%
-                select(gene_id,
-                       rank,
-                       running_enrichment_score,
-                       as.name(filter_var)),
-              rownames = FALSE)
+    results$pathways %>% 
+      filter(pathway_id == input$pathway_display) %>%
+      mutate(across(c(pvalue, qvalue, running_enrichment_score), round, 3)) %>%
+      select(gene_id,
+             rank,
+             running_enrichment_score,
+             as.name(filter_var))
     
+  },
+  server = FALSE,
+  extensions = "Buttons",
+  options = list(
+    paging = TRUE,
+    searching = TRUE,
+    ordering = TRUE,
+    dom = 'ftpB',
+    rownames = FALSE,
+    buttons = list(
+      list(extend = "csv", text = "Download CSV Results", filename = paste0(input$pathway_display, ".genes.csv"),
+           exportOptions = list(
+             modifier = list(page = "all")
+           )
+      ),
+      list(extend = "excel", text = "Download Excel Results", filename = paste0(input$pathway_display, ".genes.xls"),
+           exportOptions = list(
+             modifier = list(page = "all")
+           )
+      )
+    )
+  ),
+  rownames = FALSE
+  )
+  
+  output$pathways_results <- DT::renderDataTable({
+    cb <- htmlwidgets::JS('function(){debugger;HTMLWidgets.staticRender();}')
+    filter_var = ifelse(input$filter_type == "p-value", "pvalue", "qvalue")
+    if (is.null(results$pathways))
+      return(NULL)
+    if (nrow(results$pathways) == 0)
+      return(NULL)
+    
+    pathways_data = results$pathways %>%
+      dplyr::mutate(across(c(pvalue, qvalue), round, 3)) %>%
+      dplyr::select(.data$pathway_id,
+                    .data$pathway_name,
+                    as.name(filter_var)) %>%
+      unique()
+    
+    spark_data = NULL
+    
+    for (name in pathways_data$pathway_id){
+      RES_data = data %>% filter(pathway_id == name)
+      RES_spark = spk_chr(RES_data$running_enrichment_score, type = "line")
+      spark_data = rbind(spark_data, pathways_data %>% filter(pathway_id == name) %>% mutate(RES = RES_spark))
+    }
+    dt <-  DT::datatable(
+      as.data.frame(spark_data),
+      rownames = FALSE,
+      escape = FALSE,
+      options = list(
+        #### add the drawCallback to static render the sparklines
+        ####   staticRender will not redraw what has already been rendered
+        drawCallback =  cb
+      )
+    )
   })
   
   output$pathways_results <- renderDT({
@@ -835,14 +979,158 @@ server <- function(input, output) {
       return(NULL)
     if (nrow(results$pathways) == 0)
       return(NULL)
-    datatable(results$pathways %>%
-                dplyr::mutate(across(c(pvalue, qvalue), round, 3)) %>%
-                dplyr::select(.data$pathway_id, 
-                              .data$pathway_name, 
-                              as.name(filter_var)) %>%
-                unique(),
-              rownames = FALSE)
+    
+    pathways_data = results$pathways %>%
+      dplyr::mutate(across(c(pvalue, qvalue), round, 3)) %>%
+      dplyr::select(.data$pathway_id,
+                    .data$pathway_name,
+                    as.name(filter_var)) %>%
+      unique()
+    
+    spark_data = NULL
+    
+    for (name in pathways_data$pathway_id){
+      RES_data = data %>% filter(pathway_id == name)
+      RES_spark = spk_chr(RES_data$running_enrichment_score, type = "line")
+      spark_data = rbind(spark_data, pathways_data %>% filter(pathway_id == name) %>% mutate(RES = RES_spark))
+    }
+    
+    dt <-  DT::datatable(
+      as.data.frame(spark_data),
+      rownames = FALSE,
+      escape = FALSE,
+      options = list(
+        #### add the drawCallback to static render the sparklines
+        ####   staticRender will not redraw what has already been rendered
+        drawCallback =  cb,
+        paging = TRUE,
+        searching = TRUE,
+        ordering = TRUE,
+        dom = 'ftpB',
+        rownames = FALSE,
+        escape = FALSE,
+        drawCallback =  htmlwidgets::JS('function(){debugger;HTMLWidgets.staticRender();}'),
+        buttons = list(
+          list(extend = "csv", text = "Download CSV Results", filename = paste0(input$title, ".pathways.csv"),
+               exportOptions = list(
+                 modifier = list(page = "all")
+               )
+          ),
+          list(extend = "excel", text = "Download Excel Results", filename = paste0(input$title, ".pathways.xls"),
+               exportOptions = list(
+                 modifier = list(page = "all")
+               )
+          )
+        )
+      )
+    )
   })
+  
+  output$download_button_output <- renderUI({
+    if (is.null(results$pathways))
+      return(NULL)
+    div(hr(),downloadButton("download_data", "Download All Results"))
+  })
+  
+  output$download_data <- downloadHandler(
+    # make filename = analysis_title.zip
+    filename = function() {
+      paste(input$title, "zip", sep = ".")
+    },
+    # set up content
+    content = function(filename) {
+      # get filter type and cutoff
+      filter_type <- input$filter_type
+      significance_cutoff <- input$significance_cutoff
+      
+      # break until we have pathways information
+      if (is.null(results$pathways_assignments))
+        return(NULL)
+      
+      # set up empty vector of files and move to tempdir()
+      fs <- c()
+      setwd(tempdir())
+      
+      # write SNP-gene assignments
+      write.table(results$gene_assignments, paste0(input$title, ".SNP-gene.tsv"), sep = "\t", quote = F, row.names = F)
+      
+      # write full pathways file
+      write.table(results$pathways_assignments, paste0(input$title, ".pathways.tsv"), sep = "\t", quote = F, row.names = F)
+      
+      # write filtered pathways file
+      write.table(results$pathways,
+                  paste0(input$title, ".pathways.filtered.tsv"),
+                  quote = F,
+                  row.names = F,
+                  sep = "\t")
+      
+      # store pathways files
+      fs <-
+        c(
+          paste0(input$title, ".SNP-gene.tsv"),
+          paste0(input$title, ".pathways.tsv"),
+          paste0(input$title, ".pathways.filtered.tsv")
+        )
+      
+      # set up rugplots by arranged by pathway_number and filtering
+      rugplots_data <-
+        results$pathways %>% dplyr::arrange(.data$pathway_number)
+      
+      # split based on pathway number
+      rugplots_split <-
+        split(rugplots_data, rugplots_data$pathway_number)
+      
+      # for each pathway, draw rugplot
+      for (rank in names(rugplots_split)) {
+        # get data
+        pathway_data <- rugplots_split[[rank]]
+        
+        title <-
+          paste0(unique(as.character(pathway_data$pathway_id)), " - ",
+                 unique(as.character(pathway_data$pathway_name)))
+        intercept <- pathway_data %>%
+          dplyr::arrange(desc(.data$running_enrichment_score)) %>%
+          dplyr::select(.data$rank)
+        intercept <- intercept[, 1][1]
+        rugplot <-
+          ggplot(pathway_data,
+                 aes(x = rank,
+                     y = running_enrichment_score,
+                     label = gene_id)) +
+          geom_line(stat = "identity", color = "#fe4365") +
+          geom_rug(sides = "t", color = "#fe4365") +
+          geom_vline(xintercept = intercept,
+                     color = "red",
+                     linetype = "longdash") +
+          ggtitle(title) +
+          geom_text(alpha = 0.0) + 
+          labs(x = "Gene Rank", y = "Running Enrichment Score") +
+          theme_minimal() + 
+          theme(
+            axis.text = element_text (color = "#a1a1a1"),
+            plot.background = element_rect (color = "#a1a1a1", fill = "#222831"),
+            panel.background = element_rect (color = "#a1a1a1", fill = "#222831"),
+            plot.title = element_text(color = "#a1a1a1"),
+            axis.title = element_text(color = "#a1a1a1"),
+            panel.grid.minor = element_blank()
+          )
+        
+        # set up the output path for the rugplot
+        path <- paste0(input$title,
+                       ".",
+                       unique(as.character(pathway_data$pathway_id)),
+                       ".png")
+        
+        # add the rugplot to the files to be zipped and save it in tempdir()
+        fs <- c(fs, path)
+        ggsave(path, rugplot)
+      }
+      
+      # zip the file using the name and files specified earlier
+      zipr(zipfile = filename, files = fs)
+    },
+    contentType = "application/zip"
+  )
 }
 
 # Run the application 
