@@ -42,7 +42,7 @@ globalVariables("pathway")
 #' Find Pathway Significance
 #'
 #' @param genes Genes from assign_SNPs_to_genes()
-#' @param pathways_file A file containing the pathway IDs, their names, and the
+#' @param pathways A file containing the pathway IDs, their names, and the
 #'   genes in the pathway
 #' @param gene_number_cutoff A cut-off for the minimum number of genes in a
 #'   pathway
@@ -50,9 +50,11 @@ globalVariables("pathway")
 #' @param sample_size How many times to sample the effects data during random
 #'   sampling
 #' @param num_cores The number of cores to use in parallelizing PAST
+#' @param update_progress an optional function for use with shiny that updates the user on progress
 #' @importFrom rlang .data
 #' @importFrom stats pnorm
 #' @importFrom stats sd
+#' @importFrom foreach %dopar%
 #' @import dplyr
 #' @import foreach
 #' @import doParallel
@@ -70,63 +72,101 @@ globalVariables("pathway")
 #'   "increasing", 1000, 2)
 find_pathway_significance <-
   function(genes,
-           pathways_file,
+           pathways,
            gene_number_cutoff = 5,
-           mode,
+           analysis_mode,
            sample_size = 1000,
-           num_cores) {
+           num_cores,
+           update_progress = NULL) {
     # load pathways
-    pathways <-
-      read.table(pathways_file,
-                 sep = "\t",
-                 header = TRUE,
-                 quote = "")
-
+    if (is.function(update_progress)) {
+      parts = 4
+      current_part = 0
+      message = "Loading pathways"
+      update_progress(message = message, value = 100/parts/100*current_part, paste0(round(100/parts*current_part, 2), "%"))
+      current_part = current_part + 1
+    }
+    if (is.data.frame(pathways) == FALSE) {
+      pathways <-
+        read.table(pathways,
+                   sep = "\t",
+                   header = TRUE,
+                   quote = "")  
+    }
+    
     # sample to create 1000 random distributions
+    if (is.function(update_progress)) {
+      message = "Sampling observed effects"
+      update_progress(message = message, value = 100/parts/100*current_part, paste0(round(100/parts*current_part, 2), "%"))
+      current_part = current_part + 1
+    }
     effects <- genes %>% dplyr::select(.data$name, .data$effect)
-    effects <-
-      cbind(effects, vapply(seq_len(sample_size),
-                            function(i) sample(effects$effect),
-                            FUN.VALUE = double(nrow(effects))))
-
+    # effects <-
+    #   cbind(effects, vapply(seq_len(sample_size),
+    #                         function(i) sample(effects$effect),
+    #                         FUN.VALUE = double(nrow(effects))))
+    effects_all <- cbind(effects$effect, vapply(seq_len(sample_size),
+                                                function(i) sample(effects$effect),
+                                                FUN.VALUE = double(nrow(effects))))
+    
     pathways_unique <- unique(select(pathways, .data$pathway_id))
     pathways_unique[] <- lapply(pathways_unique, as.character)
-
+    
     # process sample columns
     cl <- parallel::makeCluster(num_cores, outfile = "")
-    registerDoParallel(cl)
-    column_observations <-
-      foreach(
-        i = iter(2:(sample_size + 2)),
-        .combine = cbind,
-        .packages = c("dplyr", "PAST", "foreach", "iterators")
-      ) %dopar% {
+    parallel::clusterEvalQ(cl, {library(dplyr)})
+    parallel::clusterExport(cl, list("get_factors", 
+                                     "get_pmisses", 
+                                     "get_phits", 
+                                     "find_max", 
+                                     "get_running_enrichment_score",
+                                     "update_progress"), 
+                            envir=environment())
+    
+    
+    if (is.function(update_progress)) {
+      message = "Processing samples"
+      update_progress(message = message, value = 100/parts/100*current_part, paste0(round(100/parts*current_part, 2), "%"))
+      current_part = current_part + 1
+    }
+    column_observations <- bind_cols(
+      # foreach(
+      #   i = iter(2:(sample_size + 2)),
+      #   .combine = cbind,
+      #   .packages = c("dplyr", "PAST", "foreach", "iterators")
+      # ) %dopar% {
+      parCapply(cl, effects_all, function(effects_column, genes, analysis_mode, pathways, gene_number_cutoff, update_progress) {
+        pathways_unique <- unique(select(pathways, .data$pathway_id))
+        pathways_unique[] <- lapply(pathways_unique, as.character)
+        
         temp_data <-
-          data.frame(matrix("NA", ncol = 2, nrow = nrow(effects)))
+          data.frame(matrix("NA", ncol = 2, nrow = length(effects_column)))
         colnames(temp_data) <- c("gene", "effect")
-        temp_data$effect <- effects[, i]
-        temp_data$gene <- effects[, 1]
-
-        if (mode == "decreasing") {
+        # temp_data$effect <- effects[, i]
+        # temp_data$gene <- effects[, 1]
+        temp_data$effect <- effects_column
+        temp_data$gene <- genes
+        
+        if (analysis_mode == "decreasing") {
           temp_data <- temp_data %>%
             dplyr::arrange(.data$effect) %>%
             dplyr::mutate(rank = row_number(),
                           effect = abs(.data$effect))
-        } else if (mode == "increasing") {
+        } else if (analysis_mode == "increasing") {
           temp_data <- temp_data %>%
             dplyr::arrange(desc(.data$effect)) %>%
             dplyr::mutate(rank = row_number())
         } else {
-          stop("Incorrect mode.")
+          stop("Incorrect analysis_mode.")
         }
-
         column_observation <- data.frame()
-
-        foreach(pathway = iter(pathways_unique$pathway_id, by = "row")) %do% {
+        
+        for (pathway in pathways_unique$pathway_id) {
+          
           genes_in_pathway <-
             dplyr::filter(pathways, pathways$pathway_id == pathway) %>%
             filter(!(is.na(gene_id)))
-
+          
           ## get ranks and effects and sort by rank
           genes_in_pathway <-
             merge(genes_in_pathway,
@@ -134,19 +174,19 @@ find_pathway_significance <-
                   by.x = "gene_id",
                   by.y = "gene") %>%
             dplyr::arrange(.data$rank) %>% unique()
-
+          
           # check cutoff
           if (nrow(genes_in_pathway) >= gene_number_cutoff) {
-
+            
             # get factors using rank
             factors <- get_factors(genes_in_pathway$rank)
-
+            
             # get pmisses
             pmisses <- get_pmisses(temp_data, genes_in_pathway, factors)
-
+            
             # get phits
             phits <- get_phits(genes_in_pathway$effect)
-
+            
             # get phits-pmisses
             running_enrichment_score <- get_running_enrichment_score(phits, pmisses)
             find_max(running_enrichment_score)
@@ -158,10 +198,22 @@ find_pathway_significance <-
           }
         }
         column_observation
-      }
-
+      },
+      effects$name,
+      analysis_mode,
+      pathways,
+      gene_number_cutoff,
+      update_progress
+      )
+    )
+    
     stopCluster(cl)
-
+    
+    if (is.function(update_progress)) {
+      message = "Calculating pathways signifance"
+      update_progress(message = message, value = 100/parts/100*current_part, paste0(round(100/parts*current_part, 2), "%"))
+      current_part = current_part + 1
+    }
     pathways_unique <- cbind(pathways_unique, column_observations)
     colnames(pathways_unique) <-
       c("Pathway", "ES_Observed", seq_len(sample_size))
@@ -196,33 +248,33 @@ find_pathway_significance <-
         lambda = 0,
         fdr.level = 0.05
       )$qvalues)
-
+    
     pathways_significant <- pathways_unique %>%
       dplyr::select(.data$Pathway,
                     .data$NES_Observed,
                     .data$pvalue,
                     .data$qvalue) %>%
       dplyr::mutate(pathway_number = row_number(), NESrank = NULL)
-
+    
     temp_data <-
       data.frame(matrix("NA", ncol = 2, nrow = nrow(effects)))
     colnames(temp_data) <- c("Gene", "Effect")
     temp_data$Effect <- effects[, 2]
     temp_data$Gene <- effects[, 1]
     colnames(temp_data) <- c("Gene", "Effect")
-    if (mode == "decreasing") {
+    if (analysis_mode == "decreasing") {
       temp_data <- temp_data %>%
         dplyr::arrange(.data$Effect) %>%
         dplyr::mutate(rank = row_number(),
                       effect = abs(.data$Effect))
-    } else if (mode == "increasing") {
+    } else if (analysis_mode == "increasing") {
       temp_data <- temp_data %>%
         dplyr::arrange(desc(.data$Effect)) %>%
         dplyr::mutate(rank = row_number())
     } else {
-      stop("Incorrect mode.")
+      stop("Incorrect analysis_mode.")
     }
-
+    
     rugplots_data <- NULL
     rugplots_data <-
       foreach(
@@ -231,7 +283,7 @@ find_pathway_significance <-
       ) %do% {
         genes_in_pathway <-
           dplyr::filter(pathways, pathways$pathway_id == pathway)
-
+        
         ## get ranks and effects and sort by rank
         genes_in_pathway <-
           merge(genes_in_pathway,
@@ -239,22 +291,22 @@ find_pathway_significance <-
                 by.x = "gene_id",
                 by.y = "Gene") %>%
           dplyr::arrange(rank)
-
+        
         # get factors using rank
         genes_in_pathway$factors <-
           get_factors(genes_in_pathway$rank)
-
+        
         # get pmisses
         genes_in_pathway$pmisses <-
           get_pmisses(temp_data, genes_in_pathway, genes_in_pathway$factors)
-
+        
         # get phits
         genes_in_pathway$phits <- get_phits(genes_in_pathway$Effect)
-
+        
         # get phits-pmisses
         genes_in_pathway$running_enrichment_score <-
           get_running_enrichment_score(genes_in_pathway$phits, genes_in_pathway$pmisses)
-
+        
         # append rows with NESrank
         genes_in_pathway <-
           merge(genes_in_pathway,
@@ -289,5 +341,10 @@ find_pathway_significance <-
       by.y = "Pathway"
     ) %>%
       dplyr::arrange(.data$pathway_number)
+    if (is.function(update_progress)) {
+      message = "Complete"
+      update_progress(message = message, value = 100/parts/100*current_part, paste0(round(100/parts*current_part, 2), "%"))
+      current_part = current_part + 1
+    }
     rugplots_data
   }

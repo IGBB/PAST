@@ -7,7 +7,8 @@
 load_LD(
   LD_file,
   LD_columns = c("Locus1", "Position1", "Site1", "Position2", "Site2", "Dist_bp",
-    "R.2")
+    "R.2"),
+  update_progress = NULL
 )
 }
 \arguments{
@@ -18,6 +19,8 @@ data for the chromosome of the first SNP, the position of the first SNP,
 the site of the first SNP, the chromosome of the second SNP, the position
 of the second SNP, the site of the second SNP, the distance between the
 two SNPs, and the R.2}
+
+\item{update_progress}{an optional function for use with shiny that updates the user on progress}
 }
 \value{
 The linkage disequilibrium data in a list containing

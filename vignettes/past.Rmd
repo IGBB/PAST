@@ -9,8 +9,8 @@ vignette: >
   \usepackage[utf8]{inputenc}
   ---
   
-```{r setup, include = FALSE}
-knitr::opts_chunk$set(
+  ```{r setup, include = FALSE}
+  knitr::opts_chunk$set(
 collapse = TRUE,
 comment = "#>"
 )
@@ -165,6 +165,14 @@ genes <-assign_SNPs_to_genes(gwas_data_from_single_file,
                              1000, 
                              0.8, 
                              2)
+genes_data = as.data.frame(rtracklayer::readGFF(demo_genes_file, filter=list(type=c("gene"))))
+genes_from_df <-assign_SNPs_to_genes(gwas_data_from_single_file, 
+                                     LD, 
+                                     genes_data,
+                                     c("gene"),
+                                     1000, 
+                                     0.8, 
+                                     2)
 ```
 
 ## Finding Pathway Significance

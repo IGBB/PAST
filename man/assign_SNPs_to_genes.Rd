@@ -7,11 +7,12 @@
 assign_SNPs_to_genes(
   gwas_data,
   LD,
-  gff_file,
+  genes,
   filter_type,
   window,
   r_squared_cutoff,
-  num_cores
+  num_cores,
+  update_progress = NULL
 )
 }
 \arguments{
@@ -19,13 +20,15 @@ assign_SNPs_to_genes(
 
 \item{LD}{Linkage disequilibrium data from parse_LD()}
 
-\item{gff_file}{The path to a GFF file}
+\item{genes}{The path to a GFF file}
 
 \item{window}{The search window for genes around the SNP}
 
 \item{r_squared_cutoff}{The R^2 value used to determine SNP significance}
 
 \item{num_cores}{The number of cores to use in parallelizing PAST}
+
+\item{update_progress}{an optional function for use with shiny that updates the user on progress}
 }
 \value{
 A dataframe of genes from the SNP data

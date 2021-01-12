@@ -67,19 +67,26 @@ plot_pathways <-
       rugplot <-
         ggplot(temp_data,
                aes(x = rank,
-                   y = running_enrichment_score)) +
-        geom_line(stat = "identity") +
-        geom_rug(sides = "t", position = "jitter") +
+                   y = running_enrichment_score,
+                   label = gene_id)) +
+        geom_line(stat = "identity", color = "#fe4365") +
+        geom_rug(sides = "t", color = "#fe4365") +
         geom_vline(xintercept = intercept,
-                   color = "black",
+                   color = "red",
                    linetype = "longdash") +
         ggtitle(title) +
+        geom_text(alpha = 0.0) + 
         labs(x = "Gene Rank", y = "Running Enrichment Score") +
-        scale_x_continuous(breaks = c(0, 5000, 10000, 15000, 20000, 25000)) +
+        # scale_x_continuous(breaks = c(0, 5000, 10000, 15000, 20000, 25000)) +
+        theme_minimal() + 
         theme(
-          axis.text = element_text (color = "black"),
-          panel.background = element_rect (color = "black", fill = "pink")
-        )
+          axis.text = element_text (color = "#a1a1a1"),
+          plot.background = element_rect (color = "#a1a1a1", fill = "#222831"),
+          panel.background = element_rect (color = "#a1a1a1", fill = "#222831"),
+          plot.title = element_text(color = "#a1a1a1"),
+          axis.title = element_text(color = "#a1a1a1"),
+          panel.grid.minor = element_blank()
+        ) 
       ggsave(paste0(
         output_directory,
         "/",

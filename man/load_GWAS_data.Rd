@@ -5,22 +5,42 @@
 \title{Load GWAS data}
 \usage{
 load_GWAS_data(
-  association_file,
-  effects_file,
-  association_columns = c("Trait", "Marker", "Locus", "Site", "p", "marker_R2"),
-  effects_columns = c("Trait", "Marker", "Locus", "Site", "Effect")
+  files,
+  trait = "Trait",
+  marker = "Marker",
+  locus = "Locus",
+  site = "Site",
+  p = "p",
+  marker_R2 = "marker_R2",
+  effect = "Effect",
+  input_type,
+  effects_trait = "Trait",
+  effects_marker = "Marker",
+  effects_locus = "Locus",
+  effects_site = "Site",
+  update_progress = NULL
 )
 }
 \arguments{
-\item{association_file}{The association file}
+\item{files}{The file or files containing GWAS data as a vector}
 
-\item{effects_file}{The effects file}
+\item{trait}{The names of the trait column}
 
-\item{association_columns}{The names of the columns in your association data
-for Trait, Marker, Chromosome, Site, F, p, and marker_Rsquared}
+\item{marker}{The names of the marker column}
 
-\item{effects_columns}{The names of the columns in your effects data for
-Trait, Marker, Chromosome, Site, and effect}
+\item{locus}{The names of the locus column}
+
+\item{site}{The names of the site column}
+
+\item{p}{The names of the p column}
+
+\item{marker_R2}{The names of the marker_R2 column}
+
+\item{effect}{The names of the effect column}
+
+\item{input_type}{single, two, TASSEL}
+
+\item{update_progress}{an optional function for use with shiny that updates the user on progress}
 }
 \value{
 The association data and the effects data merged into a dataframe
@@ -30,9 +50,12 @@ The association data and the effects data merged into a dataframe
 Load GWAS data
 }
 \examples{
-demo_association_file = system.file("extdata", "association.txt.xz",
-  package = "PAST", mustWork = TRUE)
-demo_effects_file = system.file("extdata", "effects.txt.xz",
-  package = "PAST", mustWork = TRUE)
-gwas_data <- load_GWAS_data(demo_association_file, demo_effects_file)
+demo_gwas_file = system.file("extdata", "single_gwas.txt.xz", package = "PAST", mustWork = TRUE)
+gwas_data <- load_single_generic(c(demo_gwas_file))
+demo_association_file = system.file("extdata", "association.txt.xz", package = "PAST", mustWork = TRUE)
+demo_effects_file = system.file("extdata", "effects.single_line.txt.xz", package = "PAST", mustWork = TRUE)
+gwas_data <- load_two_generic(c(demo_association_file, demo_effects_file))
+demo_association_file = system.file("extdata", "association.txt.xz", package = "PAST", mustWork = TRUE)
+demo_effects_file = system.file("extdata", "effects.txt.xz", package = "PAST", mustWork = TRUE)
+gwas_data <- load_TASSEL(c(demo_association_file, demo_effects_file))
 }

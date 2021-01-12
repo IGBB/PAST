@@ -6,28 +6,31 @@
 \usage{
 find_pathway_significance(
   genes,
-  pathways_file,
+  pathways,
   gene_number_cutoff = 5,
-  mode,
+  analysis_mode,
   sample_size = 1000,
-  num_cores
+  num_cores,
+  update_progress = NULL
 )
 }
 \arguments{
 \item{genes}{Genes from assign_SNPs_to_genes()}
 
-\item{pathways_file}{A file containing the pathway IDs, their names, and the
+\item{pathways}{A file containing the pathway IDs, their names, and the
 genes in the pathway}
 
 \item{gene_number_cutoff}{A cut-off for the minimum number of genes in a
 pathway}
 
-\item{mode}{increasing/decreasing}
-
 \item{sample_size}{How many times to sample the effects data during random
 sampling}
 
 \item{num_cores}{The number of cores to use in parallelizing PAST}
+
+\item{update_progress}{an optional function for use with shiny that updates the user on progress}
+
+\item{mode}{increasing/decreasing}
 }
 \value{
 Rugplots data

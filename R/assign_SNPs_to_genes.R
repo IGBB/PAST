@@ -291,10 +291,11 @@ find_representative_SNP_gene_pairing <- function(chunk) {
 #'
 #' @param gwas_data Merged association and effects data from merge_data()
 #' @param LD Linkage disequilibrium data from parse_LD()
-#' @param gff_file The path to a GFF file
+#' @param genes The path to a GFF file
 #' @param window The search window for genes around the SNP
 #' @param r_squared_cutoff The R^2 value used to determine SNP significance
 #' @param num_cores The number of cores to use in parallelizing PAST
+#' @param update_progress an optional function for use with shiny that updates the user on progress
 #' @importFrom rlang .data
 #' @importFrom rtracklayer readGFF
 #' @import dplyr
@@ -313,17 +314,27 @@ find_representative_SNP_gene_pairing <- function(chunk) {
 assign_SNPs_to_genes <-
     function(gwas_data,
              LD,
-             gff_file,
+             genes,
              filter_type,
              window,
              r_squared_cutoff,
-             num_cores) {
+             num_cores,
+             update_progress = NULL) {
         
-        full_gff <- as.data.frame(rtracklayer::readGFF(gff_file, filter=list(type=filter_type))) %>%
-            select(.data$seqid,
-                   .data$start,
-                   .data$end,
-                   .data$Name)
+        if (is.data.frame(genes) == FALSE) {
+            full_gff <- as.data.frame(rtracklayer::readGFF(genes, filter=list(type=filter_type))) %>%
+                select(.data$seqid,
+                       .data$start,
+                       .data$end,
+                       .data$Name)    
+        } else {
+            full_gff = genes %>%
+                select(.data$seqid,
+                       .data$start,
+                       .data$end,
+                       .data$Name)  
+        }
+        
         chromosomes <- as.character.factor(
             full_gff %>%
                 dplyr::select(.data$seqid) %>%
@@ -332,8 +343,13 @@ assign_SNPs_to_genes <-
                 dplyr::pull(.data$seqid)
         )
         
+        if (is.function(update_progress)) {
+            parts = length(chromosomes) * 2
+            current_part = 0
+        }
+        
         cl <- parallel::makeCluster(num_cores)
-        clusterEvalQ(cl, {library(dplyr); library(GenomicRanges)})
+        parallel::clusterEvalQ(cl, {library(dplyr); library(GenomicRanges)})
         
         all_genes <- NULL
         
@@ -342,6 +358,12 @@ assign_SNPs_to_genes <-
             
             # BEGIN PROCESSING BY CHROMOSOMES LOOP
             for (chromosome in names(LD)) {
+                
+                if (is.function(update_progress)) {
+                    message = paste0("Beginning ", ifelse(i == 1, "upstream ", "downstream "), "analysis of chromosome ", chromosome)
+                    message(message)
+                    update_progress(message = message, value = 100/parts/100*current_part, paste0(round(100/parts*current_part, 2), "%"))
+                }
                 
                 if (chromosome %in% chromosomes) {
                     temp_data <-
@@ -386,6 +408,7 @@ assign_SNPs_to_genes <-
                                            determine_linkage, 
                                            r_squared_cutoff = r_squared_cutoff) %>%
                         bind_rows()
+                    
                     
                     gwas_data_for_chromosome <-
                         dplyr::filter(gwas_data,
@@ -499,6 +522,12 @@ assign_SNPs_to_genes <-
                     all_genes <- rbind(all_genes, 
                                        chromosome_genes %>% 
                                            arrange(.data$position))
+                }
+                if (is.function(update_progress)) {
+                    message = paste0("Completed ", ifelse(i == 1, "upstream ", "downstream "), "analysis of chromosome ", chromosome)
+                    message(message)
+                    update_progress(message = message, value = 100/parts/100*current_part, paste0(round(100/parts*current_part, 2), "%"))
+                    current_part = current_part + 1
                 }
             }
         }

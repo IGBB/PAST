@@ -6,6 +6,7 @@
 #'   the site of the first SNP, the chromosome of the second SNP, the position
 #'   of the second SNP, the site of the second SNP, the distance between the
 #'   two SNPs, and the R.2
+#' @param update_progress an optional function for use with shiny that updates the user on progress
 #' @importFrom rlang .data
 #' @importFrom stats complete.cases
 #' @import dplyr
@@ -24,7 +25,18 @@ load_LD <- function(LD_file,
                                    "Position2",
                                    "Site2",
                                    "Dist_bp",
-                                   "R.2")) {
+                                   "R.2"),
+                    update_progress = NULL) {
+  
+  if (is.function(update_progress)) {
+    parts = 2
+  }
+  
+  if (is.function(update_progress)) {
+    current_part = 0
+    message = "Reading LD file"
+    update_progress(message = message, value = 100/parts/100*current_part, paste0(round(100/parts*current_part, 2), "%"))
+  }
   
   LD <- read.table(LD_file, header = TRUE, na.strings = c("N/A" , "NaN" )) %>%
     dplyr::mutate(Locus = as.character(!!as.name(LD_columns[1])),
@@ -41,6 +53,17 @@ load_LD <- function(LD_file,
                   .data$Site2,
                   .data$Dist_bp,
                   .data$R.2)
+  
+  if (is.function(update_progress)) {
+    current_part = 1
+    message = "Filtering LD file for null values"
+    update_progress(message = message, value = 100/parts/100*current_part, paste0(round(100/parts*current_part, 2), "%"))
+  }
   LD <- LD %>% filter(is.na(.data$R.2) != TRUE)
+  if (is.function(update_progress)) {
+    current_part = 2
+    message = "Complete"
+    update_progress(message = message, value = 100/parts/100*current_part, paste0(round(100/parts*current_part, 2), "%"))
+  }
   split(LD, f = LD$Locus)
 }
