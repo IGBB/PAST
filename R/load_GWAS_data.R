@@ -1,108 +1,189 @@
 #' Load GWAS data
 #'
-#' @param association_file The association file
-#' @param effects_file  The effects file
-#' @param association_columns The names of the columns in your association data
-#'   for Trait, Marker, Chromosome, Site, F, p, and marker_Rsquared
-#' @param effects_columns The names of the columns in your effects data for
-#'   Trait, Marker, Chromosome, Site, and effect
-#' @return The association data and the effects data merged into a dataframe
-#'   with one row for each SNP
+#' @param files a vector of files - either a single GWAS file, two files with
+#' separate association and effects data with one marker per line, or two files
+#' from the output of TASSEL
+#' @param input_type one of "single", "two", or "TASSEL"
+#' @param trait the name of the column containing the trait
+#' @param marker the name of the column containing the marker
+#' @param locus the name of the column containing the locus or chromosome
+#' @param site the name of the column containing the site or position
+#' @param p the name of the column containing the p-value
+#' @param marker_R2 the name of the column containing the p-value
+#' @param effect the name of the column containing the effect
+#' @param effects_trait the name of the column containing the trait in the 
+#' effects file; only used when input_type is "two" or "TASSEL"
+#' @param effects_marker the name of the column containing the marker in the 
+#' effects file; only used when input_type is "two" or "TASSEL"
+#' @param effects_locus the name of the column containing the locus or 
+#' chromosome in the effects file; only used when input_type is "two" or 
+#' "TASSEL"
+#' @param effects_site the name of the column containing the site or position
+#' in the effects file; only used when input_type is "two" or "TASSEL"
+#' @param update_progress used by the PAST Shiny app to report progress
+#' @return GWAS data with a marker created from locus/chromosome and 
+#' site/position, the original marker, locus/chromosome, site/position, p-value,
+#' marker R^2, and effect for every marker in the input files
 #' @export
-#' @importFrom rlang .data
-#' @import utils
-#' @import dplyr
+#' @import data.table
 #' @examples
-#' demo_association_file = system.file("extdata", "association.txt.xz",
+#' association = system.file("extdata", "association.txt.gz", package = "PAST", 
+#'   mustWork = TRUE)
+#' effects = system.file("extdata", "effects.txt.gz", package = "PAST", 
+#'   mustWork = TRUE)
+#' single = system.file("extdata", "single_gwas.txt.gz", package = "PAST", 
+#'   mustWork = TRUE)
+#' effects_single = system.file("extdata", "effects.single_line.txt.gz", 
 #'   package = "PAST", mustWork = TRUE)
-#' demo_effects_file = system.file("extdata", "effects.txt.xz",
-#'   package = "PAST", mustWork = TRUE)
-#' gwas_data <- load_GWAS_data(demo_association_file, demo_effects_file)
-load_GWAS_data <- function(association_file,
-                           effects_file,
-                           association_columns = c("Trait",
-                                                   "Marker",
-                                                   "Locus",
-                                                   "Site",
-                                                   "p",
-                                                   "marker_R2"),
-                           effects_columns = c("Trait",
-                                               "Marker",
-                                               "Locus",
-                                               "Site",
-                                               "Effect")) {
-
-  stats <- read.table(association_file, header = TRUE, sep = "\t") %>%
-    dplyr::mutate(Trait = !!as.name(association_columns[1]),
-                  Marker_original = !!as.name(association_columns[2]),
-                  Chr = !!as.name(association_columns[3]),
-                  Pos = !!as.name(association_columns[4]),
-                  Marker = paste0(.data$Chr, "_", .data$Pos),
-                  p = !!as.name(association_columns[5]),
-                  marker_R2 = !!as.name(association_columns[6])) %>%
-    dplyr::select(.data$Marker,
-                  .data$Marker_original,
-                  .data$Trait,
-                  .data$Chr,
-                  .data$Pos,
-                  .data$p,
-                  .data$marker_R2)
-
-  effects <- read.table(effects_file, header = TRUE, sep = "\t") %>%
-    dplyr::mutate(Trait = !!as.name(effects_columns[1]),
-                  Marker_original = !!as.name(effects_columns[2]),
-                  Chr = !!as.name(effects_columns[3]),
-                  Pos = !!as.name(effects_columns[4]),
-                  Effect = !!as.name(effects_columns[5])) %>%
-    dplyr::select(.data$Marker_original,
-                  .data$Trait,
-                  .data$Chr,
-                  .data$Pos,
-                  .data$Effect)
+#'   
+#' one_file = c(single_file)
+#' two_file = c(association_file, effects_single_file)
+#' tassel = c(association_file, effects_file)
+#' gwas_data <- load_GWAS_data(one_file, "single")
+#' gwas_data <- load_GWAS_data(two_file, "two")
+#' gwas_data <- load_GWAS_data(tassel, "TASSEL")
+load_GWAS_data <- function(files,
+                           input_type,
+                           trait = "Trait",
+                           marker = "Marker",
+                           locus = "Locus",
+                           site = "Site",
+                           p = "p",
+                           marker_R2 = "marker_R2",
+                           effect = "Effect",
+                           effects_trait = "Trait",
+                           effects_marker = "Marker",
+                           effects_locus = "Locus",
+                           effects_site = "Site",
+                           update_progress = NULL) {
   
-  # Delete all markers in effects and stats with more or less alleles than 2
-  non_biallelic <- effects %>%
-    dplyr::group_by(.data$Marker_original) %>%
-    dplyr::summarise(count = n()) %>%
-    dplyr::filter(count != 2)
-  effects <-
-    effects %>% 
-    dplyr::filter(!(.data$Marker_original %in% non_biallelic$Marker_original))
-  stats <-
-    stats %>% 
-    dplyr::filter(!(.data$Marker_original %in% non_biallelic$Marker_original))
-
-  # Remove all NaN data to prevent math with NaN
-  stats <- stats %>% dplyr::filter(.data$marker_R2 != "NaN")
-
-  # Split effects into even and odd rows and
-  # recombine into a single row without duplicate columns
-  odd_effects <- effects[seq(1, nrow(effects), by = 2), ]
-  even_effects <- effects[seq(2, nrow(effects), by = 2), ]
-  effects <- merge(odd_effects, even_effects, by = "Marker_original")
-  effects <- dplyr::mutate(
-    effects,
-    Trait = effects$Trait.x,
-    Trait.x = NULL,
-    Trait.y = NULL
-  )
-
-  # Merge stats and effects and return
-  all_data <- merge(stats, effects, by = "Marker_original") %>%
-    dplyr::mutate(
-      Trait = .data$"Trait.x",
-      Trait.x = NULL,
-      Trait.y = NULL
-    ) %>%
-    dplyr::select(
-      .data$Marker,
-      .data$Marker_original,
-      .data$Chr,
-      .data$Pos,
-      .data$p,
-      .data$marker_R2,
-      .data$Effect.x,
-      .data$Effect.y
-    )
-  all_data
+  # Make a vector of column names provided by the user.
+  association_columns <- c(trait, 
+                          marker, 
+                          locus, 
+                          site, 
+                          p, 
+                          marker_R2)
+  
+  effects_columns <- c(effects_trait, 
+                      effects_marker, 
+                      effects_locus, 
+                      effects_site, 
+                      effect)
+  
+  # Compare the length of the input files vector and the type of analysis
+  #   requested.
+  # If length of the input files vector and input type match, continue.
+  # Otherwise, fail with an error message.
+  if (length(files) == 1 & input_type == "single") {
+    
+    # Read the file and select its columns.
+    # Set the names to values used throughout PAST instead of what the user
+    #   provided.
+    # Create the marker column and drop the trait column.
+    # Key the data by the chromosome and position columns and return.
+    gwas <- data.table::fread(files[1], select = c(association_columns, effect))
+    data.table::setnames(gwas, c(association_columns, effect), c("trait",
+                                                                 "marker_original",
+                                                                 "chromosome",
+                                                                 "position",
+                                                                 "p-value",
+                                                                 "marker_R2",
+                                                                 "effect"))
+    gwas[,marker:=paste(chromosome, position, sep = "_")][,trait := NULL]
+    data.table::setkeyv(gwas, c("chromosome", "position"))
+    return(gwas)
+    
+  } else if (length(files) == 2 & input_type == "two") {
+    
+    # Read the file and select its columns.
+    # Set the names to values used throughout PAST instead of what the user
+    #   provided.
+    # Create the marker column.
+    # Key the data by the marker columns.
+    associations <- data.table::fread(files[1], select = association_columns)
+    data.table::setnames(associations, association_columns, c("trait",
+                                                  "marker_original",
+                                                  "chromosome",
+                                                  "position",
+                                                  "p-value",
+                                                  "marker_R2"))
+    associations[,marker:=paste(chromosome, position, sep = "_")]
+    data.table::setkey(associations, marker)
+    
+    # Read the file and select its columns.
+    # Set the names to values used throughout PAST instead of what the user
+    #   provided.
+    # Create the marker column and drop the trait, marker_original,
+    #   chromosome, and position data.
+    # Key the data by the marker columns.
+    effects <- data.table::fread(files[2], select = effects_columns)
+    data.table::setnames(effects, effects_columns, c("trait",
+                                         "marker_original",
+                                         "chromosome",
+                                         "position",
+                                         "effect"))
+    effects[
+      ,marker:=paste(chromosome, position, sep = "_")][
+        ,c("trait", "marker_original", "chromosome", "position") := NULL
+      ]
+    data.table::setkey(effects, marker)
+    
+    # Merge associations with effects by the marker column and drop the 
+    #   trait column.
+    gwas <- associations[effects, on = .(marker)][,trait := NULL]
+    
+  } else if (length(files) == 2 & input_type == "TASSEL") {
+    
+    # Read the file and select its columns.
+    # Set the names to values used throughout PAST instead of what the user
+    #   provided.
+    # Create the marker column.
+    # Key the data by the marker columns.
+    associations <- data.table::fread(files[1], select = association_columns)
+    data.table::setnames(associations, association_columns, c("trait",
+                                                  "marker_original",
+                                                  "chromosome",
+                                                  "position",
+                                                  "p-value",
+                                                  "marker_R2"))
+    associations[,marker:=paste(chromosome, position, sep = "_")]
+    data.table::setkey(associations, marker)
+    
+    # Read the file and select its columns.
+    # Set the names to values used throughout PAST instead of what the user
+    #   provided.
+    # Create the marker column.
+    # Find out which markers are biallelic.
+    # Reshape the data so that both effects for each marker on on the same
+    #   line, only keeping the marker column and the first effect.
+    #   (TASSEL's secondary effects are 0.)
+    # Rename the automatically named "1" column to "effect".
+    # Key the data by the marker columns.
+    effects <- data.table::fread(files[2], select = effects_columns)
+    data.table::setnames(effects, effects_columns, c("trait",
+                                         "marker_original",
+                                         "chromosome",
+                                         "position",
+                                         "effect"))
+    effects[,marker:=paste(chromosome, position, sep = "_")]
+    biallelic <- effects[, .(.N), by = .(marker)][N == 2]
+    effects <- data.table::dcast(effects, 
+                                marker ~ rowid(marker), 
+                                value.var = c("effect"))[
+                                  biallelic, c("marker", "1")
+                                  ]
+    data.table::setnames(effects, "1", "effect")
+    data.table::setkey(effects, marker)
+    
+    # Merge associations with effects by the marker column and drop the 
+    #   trait column.
+    gwas <- associations[effects, on = .(marker)][,trait := NULL]
+    
+  } else {
+    stop("Length of files and input type are incorrect.")
+  }
+  # Key the data by the chromosome and position columns and return.
+  data.table::setkeyv(gwas, c("chromosome", "position"))
+  return(gwas)
 }

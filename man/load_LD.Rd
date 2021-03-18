@@ -6,28 +6,40 @@
 \usage{
 load_LD(
   LD_file,
-  LD_columns = c("Locus1", "Position1", "Site1", "Position2", "Site2", "Dist_bp",
-    "R.2")
+  locus = "Locus1",
+  position1 = "Position1",
+  site1 = "Site1",
+  position2 = "Position2",
+  site2 = "Site2",
+  distance = "Dist_bp",
+  r_squared = "R^2"
 )
 }
 \arguments{
-\item{LD_file}{The file containing linkage disequilibrium data}
+\item{LD_file}{the file containing linkage disequilibrium data}
 
-\item{LD_columns}{The names of the columns in your linkage disequilibrium
-data for the chromosome of the first SNP, the position of the first SNP,
-the site of the first SNP, the chromosome of the second SNP, the position
-of the second SNP, the site of the second SNP, the distance between the
-two SNPs, and the R.2}
+\item{locus}{the name of the column containing the locus or chromosome}
+
+\item{position1}{the name of the column containing the first SNP's position}
+
+\item{site1}{the name of the column containing the first SNP's site}
+
+\item{position2}{the name of the column containing second SNP's position}
+
+\item{site2}{the name of the column containing the second SNP's site}
+
+\item{distance}{the name of the column containing distance between the SNPs}
+
+\item{r_squared}{the name of the column containing R^2}
 }
 \value{
-The linkage disequilibrium data in a list containing
-  dataframes for each chromosome.
+the linkage disequilibrium data in a data.table
 }
 \description{
 Load Linkage Disequilibrium
 }
 \examples{
-demo_LD_file = system.file("extdata","LD.txt.xz",
-  package = "PAST", mustWork = TRUE)
-LD <- load_LD(demo_LD_file)
+LD_file = system.file("extdata","LD.txt.gz", package = "PAST", 
+mustWork = TRUE)
+LD <- load_LD(LD_file)
 }

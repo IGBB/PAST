@@ -5,34 +5,80 @@
 \title{Load GWAS data}
 \usage{
 load_GWAS_data(
-  association_file,
-  effects_file,
-  association_columns = c("Trait", "Marker", "Locus", "Site", "p", "marker_R2"),
-  effects_columns = c("Trait", "Marker", "Locus", "Site", "Effect")
+  files,
+  input_type,
+  trait = "Trait",
+  marker = "Marker",
+  locus = "Locus",
+  site = "Site",
+  p = "p",
+  marker_R2 = "marker_R2",
+  effect = "Effect",
+  effects_trait = "Trait",
+  effects_marker = "Marker",
+  effects_locus = "Locus",
+  effects_site = "Site",
+  update_progress = NULL
 )
 }
 \arguments{
-\item{association_file}{The association file}
+\item{files}{a vector of files - either a single GWAS file, two files with
+separate association and effects data with one marker per line, or two files
+from the output of TASSEL}
 
-\item{effects_file}{The effects file}
+\item{input_type}{one of "single", "two", or "TASSEL"}
 
-\item{association_columns}{The names of the columns in your association data
-for Trait, Marker, Chromosome, Site, F, p, and marker_Rsquared}
+\item{trait}{the name of the column containing the trait}
 
-\item{effects_columns}{The names of the columns in your effects data for
-Trait, Marker, Chromosome, Site, and effect}
+\item{marker}{the name of the column containing the marker}
+
+\item{locus}{the name of the column containing the locus or chromosome}
+
+\item{site}{the name of the column containing the site or position}
+
+\item{p}{the name of the column containing the p-value}
+
+\item{marker_R2}{the name of the column containing the p-value}
+
+\item{effect}{the name of the column containing the effect}
+
+\item{effects_trait}{the name of the column containing the trait in the 
+effects file; only used when input_type is "two" or "TASSEL"}
+
+\item{effects_marker}{the name of the column containing the marker in the 
+effects file; only used when input_type is "two" or "TASSEL"}
+
+\item{effects_locus}{the name of the column containing the locus or 
+chromosome in the effects file; only used when input_type is "two" or 
+"TASSEL"}
+
+\item{effects_site}{the name of the column containing the site or position
+in the effects file; only used when input_type is "two" or "TASSEL"}
+
+\item{update_progress}{used by the PAST Shiny app to report progress}
 }
 \value{
-The association data and the effects data merged into a dataframe
-  with one row for each SNP
+GWAS data with a marker created from locus/chromosome and 
+site/position, the original marker, locus/chromosome, site/position, p-value,
+marker R^2, and effect for every marker in the input files
 }
 \description{
 Load GWAS data
 }
 \examples{
-demo_association_file = system.file("extdata", "association.txt.xz",
+association = system.file("extdata", "association.txt.gz", package = "PAST", 
+  mustWork = TRUE)
+effects = system.file("extdata", "effects.txt.gz", package = "PAST", 
+  mustWork = TRUE)
+single = system.file("extdata", "single_gwas.txt.gz", package = "PAST", 
+  mustWork = TRUE)
+effects_single = system.file("extdata", "effects.single_line.txt.gz", 
   package = "PAST", mustWork = TRUE)
-demo_effects_file = system.file("extdata", "effects.txt.xz",
-  package = "PAST", mustWork = TRUE)
-gwas_data <- load_GWAS_data(demo_association_file, demo_effects_file)
+  
+one_file = c(single_file)
+two_file = c(association_file, effects_single_file)
+tassel = c(association_file, effects_file)
+gwas_data <- load_GWAS_data(one_file, "single")
+gwas_data <- load_GWAS_data(two_file, "two")
+gwas_data <- load_GWAS_data(tassel, "TASSEL")
 }
