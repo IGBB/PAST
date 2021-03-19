@@ -1,523 +1,331 @@
-# These aren't really global, but R CMD check
-# doesn't understand how to deal with variable
-# created by foreach loops
-globalVariables("snp_chunk")
-globalVariables("chunk")
-
-#' Determine Linkage
-#'
-#' @param chunk A chunk of data to be processed
-#' @param r_squared_cutoff The R^2 value to check against
-#' @importFrom rlang .data
-#' @import dplyr
-#' @return Either the first unlinked SNP or a set of linked SNPs
-determine_linkage <- function(chunk, r_squared_cutoff) {
-    lapply(chunk, function(data) {
-        data <- data %>% dplyr::arrange(.data$Dist_bp)
-        linked <- data %>% dplyr::filter(.data$R.2 >= r_squared_cutoff)
-        unlinked <- data %>% dplyr::filter(.data$R.2 < r_squared_cutoff)
-        if (nrow(unlinked) == nrow(data)) {
-            unlinked[1, ]
-        } else {
-            linked %>% filter(.data$R.2 > r_squared_cutoff)
-        }
-    }) %>% dplyr::bind_rows()
-}
-
-#' Find representative SNP for a chunk of SNPs
-#'
-#' @param chunk A chunk of data to parse
-#' @param r_squared_cutoff The R^2 value to check against when counting SNPs
-#' @importFrom rlang .data
-#' @import dplyr
-#' @return A single SNP representing the whole chunk
-find_representative_SNP <- function(chunk, r_squared_cutoff) {
-    chunk <- chunk %>%
-        dplyr::mutate(linked_snp_count = nrow(chunk),
-                      linked_snp_count = ifelse(.data$R.2 < r_squared_cutoff,
-                                                0,
-                                                .data$linked_snp_count))
-    # count the number of negative/positive effects in each chunk
-    negative <- sum(chunk$SNP2_effect < 0)
-    positive <- sum(chunk$SNP2_effect > 0)
-    
-    # Find SNP with largest negative or positive effect
-    if (positive > negative) {
-        # sort in descending order
-        chunk <- chunk %>%
-            dplyr::arrange(desc(.data$SNP2_effect), .data$Dist_bp)
-        
-        # get top row
-        chunk <- chunk[1, ]
-        
-    } else if (negative > positive) {
-        
-        # sort in ascending order
-        chunk <- chunk %>%
-            dplyr::arrange(.data$SNP2_effect, .data$Dist_bp)
-        
-        # get top row
-        chunk <- chunk[1, ]
-        
-    } else if (negative == positive) {
-        if (chunk$SNP1_effect[[1]] > 0) {
-            
-            # sort in descending order
-            chunk <- chunk %>%
-                dplyr::arrange(desc(.data$SNP2_effect), .data$Dist_bp)
-            
-            # get top row
-            chunk <- chunk[1, ] %>%
-                dplyr::mutate(linked_snp_count = -1)
-        } else{
-            # sort in ascending order
-            chunk <- chunk %>%
-                dplyr::arrange(.data$SNP2_effect, .data$Dist_bp)
-            
-            # get top row
-            chunk <- chunk[1, ] %>%
-                dplyr::mutate(linked_snp_count = -1)
-        }
-    }
-    chunk
-}
-
-#' Assign SNPs in a chunk to genes
-#'
-#' @param gff The GFF data for the chromosome being parsed
-#' @param chunk The dataframe containing SNP data
-#' @param window The search window around the SNPs
-#' @importFrom rlang .data
-#' @import dplyr
-#' @import GenomicRanges
-#' @import S4Vectors
-#' @return tagSNPs labeled with gene names
-assign_chunk <- function(gff, chunk, window) {
-    
-    # set up data.frame of conditions to select tagSNP
-    conditions <- chunk %>%
-        dplyr::mutate(unlinked = .data$linked_snp_count == 0,
-                      single_linked = .data$linked_snp_count == 1,
-                      many_linked = .data$linked_snp_count > 1,
-                      problem_linked = .data$linked_snp_count == -1,
-                      effects_same_sign = .data$SNP1_effect * .data$SNP2_effect > 0,
-                      largest_effect = ifelse(abs(.data$SNP1_effect) >
-                                                  abs(.data$SNP2_effect),
-                                              "SNP1",
-                                              "SNP2"),
-                      effects_same_sign_use = ifelse(.data$SNP1_effect == .data$SNP2_effect,
-                                                     "SNP2",
-                                                     .data$largest_effect),
-                      pvalue_equal = ifelse(.data$SNP1_pvalue == .data$SNP2_pvalue,
-                                            TRUE,
-                                            FALSE),
-                      pvalue_not_equal_use = ifelse(.data$SNP1_pvalue > .data$SNP2_pvalue,
-                                                    "SNP2",
-                                                    "SNP1"),
-                      single_pvalue_use = ifelse(.data$pvalue_equal == FALSE,
-                                                 .data$pvalue_not_equal_use,
-                                                 "PROBLEM"),
-                      single_use = ifelse(.data$effects_same_sign == TRUE,
-                                          .data$effects_same_sign_use,
-                                          .data$pvalue_not_equal_use),
-                      distance_use = ifelse(.data$Dist_bp < window,
-                                            .data$effects_same_sign_use,
-                                            "SNP2"),
-                      many_use = ifelse(.data$effects_same_sign == TRUE,
-                                        .data$distance_use,
-                                        "SNP2"),
-                      problem_use = ifelse(.data$effects_same_sign == TRUE,
-                                           .data$effects_same_sign_use,
-                                           "PROBLEM"),
-                      chromosome = .data$Locus,
-                      position = NA,
-                      effect = NA,
-                      p.value = NA,
-                      distance = .data$Dist_bp) %>%
-        dplyr::select(.data$unlinked,
-                      .data$single_linked,
-                      .data$many_linked,
-                      .data$problem_linked,
-                      .data$single_use,
-                      .data$many_use,
-                      .data$problem_use,
-                      .data$Position1,
-                      .data$Position2,
-                      .data$SNP1_pvalue,
-                      .data$SNP1_effect,
-                      .data$SNP2_pvalue,
-                      .data$SNP2_effect,
-                      .data$chromosome,
-                      .data$position,
-                      .data$effect,
-                      .data$p.value,
-                      .data$distance,
-                      .data$linked_snp_count
-        )
-    
-    # handle unlinked SNPs
-    conditions <- rbind(conditions %>% dplyr::filter(.data$unlinked == FALSE),
-                        conditions %>% dplyr::filter(.data$unlinked == TRUE) %>%
-                            dplyr::mutate(position = .data$Position1,
-                                          effect = .data$SNP1_effect,
-                                          p.value = .data$SNP1_pvalue)
-    ) %>%
-        dplyr::select(-.data$unlinked)
-    
-    # handle single linked SNPs
-    conditions <- rbind(conditions %>%
-                            dplyr::filter(.data$single_linked == FALSE),
-                        conditions %>%
-                            dplyr::filter(.data$single_linked == TRUE) %>%
-                            dplyr::mutate(position = ifelse(.data$single_use == "SNP1",
-                                                            .data$Position1,
-                                                            .data$Position2),
-                                          effect = ifelse(.data$single_use == "SNP1",
-                                                          .data$SNP1_effect,
-                                                          .data$SNP2_effect),
-                                          p.value = ifelse(.data$single_use == "SNP1",
-                                                           .data$SNP1_pvalue,
-                                                           .data$SNP2_pvalue))
-    ) %>%
-        dplyr::select(-.data$single_linked,
-                      -.data$single_use)
-    
-    # handle multiply-linked SNPs
-    conditions <- rbind(conditions %>%
-                            dplyr::filter(.data$many_linked == FALSE),
-                        conditions %>%
-                            dplyr::filter(.data$many_linked == TRUE) %>%
-                            dplyr::mutate(position = ifelse(.data$many_use == "SNP1",
-                                                            .data$Position1,
-                                                            .data$Position2),
-                                          effect = ifelse(.data$many_use == "SNP1",
-                                                          .data$SNP1_effect,
-                                                          .data$SNP2_effect),
-                                          p.value = ifelse(.data$many_use == "SNP1",
-                                                           .data$SNP1_pvalue,
-                                                           .data$SNP2_pvalue))
-    ) %>%
-        dplyr::select(-.data$many_linked,
-                      -.data$many_use)
-    
-    # handle problem SNPs
-    tagSNPs <- rbind(conditions %>%
-                         dplyr::filter(.data$problem_linked == FALSE),
-                     conditions %>%
-                         dplyr::filter(.data$problem_linked == TRUE) %>%
-                         dplyr::mutate(position = ifelse(.data$problem_use == "SNP1",
-                                                         .data$Position1,
-                                                         .data$Position2),
-                                       effect = ifelse(.data$problem_use == "SNP1",
-                                                       .data$SNP1_effect,
-                                                       .data$SNP2_effect),
-                                       p.value = ifelse(.data$problem_use == "SNP1",
-                                                        .data$SNP1_pvalue,
-                                                        .data$SNP2_pvalue))
-    ) %>%
-        dplyr::select(.data$chromosome,
-                      .data$position,
-                      .data$effect,
-                      .data$p.value,
-                      .data$distance,
-                      .data$linked_snp_count) %>%
-        dplyr::mutate(start = .data$position - window,
-                      stop = .data$position + window) %>%
-        dplyr::arrange(.data$position) %>% filter(!(is.na(.data$position)))
-    
-    # assign genes
-    gr1 = with(tagSNPs, GRanges(chromosome, IRanges(start = position, 
-                                                    end = position)))
-    gr2 = with(gff, GRanges(seqid, IRanges(start = start-window, 
-                                           end = end+window, 
-                                           names = Name)))
-    overlaps = GenomicRanges::findOverlaps(query = gr1, subject = gr2)
-    data.frame(tagSNPs[S4Vectors::queryHits(overlaps),], 
-               name=gff[S4Vectors::subjectHits(overlaps),"Name"]) %>%
-        dplyr::select(-c(
-            .data$distance,
-            .data$start,
-            .data$stop
-        ))
-}
-
-#' Find the SNP-gene assignment that represents SNPs assigned to a gene
-#'
-#' @param chunk A chunk of gene assignments
-#' @importFrom rlang .data
-#' @import dplyr
-#' @return A single SNP-gene assignment representing all SNPS assigned to the
-#'   same gene
-#' to a gene
-find_representative_SNP_gene_pairing <- function(chunk) {
-    neg_genes <- chunk %>%
-        dplyr::filter(.data$effect < 0) %>%
-        dplyr::arrange(.data$effect, .data$p.value) %>%
-        dplyr::mutate(linked_snp_count = ifelse(.data$linked_snp_count <= 0,
-                                                1,
-                                                .data$linked_snp_count))
-    pos_genes <- chunk %>%
-        dplyr::filter(.data$effect > 0) %>%
-        dplyr::arrange(desc(.data$effect), .data$p.value) %>%
-        dplyr::mutate(linked_snp_count = ifelse(.data$linked_snp_count <= 0,
-                                                1,
-                                                .data$linked_snp_count))
-    negative <- sum(neg_genes$linked_snp_count)
-    positive <- sum(pos_genes$linked_snp_count)
-    
-    if (positive > negative) {
-        chunk <- chunk %>%
-            dplyr::arrange(desc(.data$effect), desc(.data$p.value))
-        representative <- chunk[1, ]
-    } else if (negative > positive) {
-        chunk <- chunk %>%
-            dplyr::arrange(.data$effect, .data$p.value)
-        representative <- chunk[1, ]
-    } else if (positive == negative) {
-        pos_max <- pos_genes[1, ]
-        neg_max <- neg_genes[1, ]
-        
-        if (pos_max$effect > abs(neg_max$effect)) {
-            representative <- pos_max
-        }
-        else{
-            representative <- neg_max
-        }
-    }
-    representative %>% dplyr::mutate(linked_snp_count = negative + positive)
-}
-
 #' Assign SNPs to genes
 #'
-#' @param gwas_data Merged association and effects data from merge_data()
-#' @param LD Linkage disequilibrium data from parse_LD()
-#' @param gff_file The path to a GFF file
-#' @param window The search window for genes around the SNP
-#' @param r_squared_cutoff The R^2 value used to determine SNP significance
-#' @param num_cores The number of cores to use in parallelizing PAST
-#' @importFrom rlang .data
-#' @importFrom rtracklayer readGFF
-#' @import dplyr
-#' @import foreach
-#' @import doParallel
-#' @return A dataframe of genes from the SNP data
+#' @param gwas_data GWAS data from load_GWAS_data()
+#' @param LD linkage disequilibrium data from load_LD()
+#' @param GFF_file the path to a GFF-formatted of annotations.
+#' @param window the search window for genes around the SNP
+#' @param r_squared_cutoff the R^2 value used to determine SNP significance
+#' @param name_attribute the field in the 9th column of the GFF file that
+#' contains the desired gene name (for example, the 9th column might look like
+#' ID=NNN;Name=NNN;description=NNN - to use the name in the Name field, provide
+#' "Name")
+#' @import data.table
+#' @return a data.table of SNP-gene assignments, reduced to the SNP that best
+#' represents all SNPs assigned to the same gene for each gene
 #' @export
 #'
 #' @examples
 #' example("load_GWAS_data")
 #' example("load_LD")
-#' demo_genes_file = system.file("extdata", "genes.gff",
-#'   package = "PAST", mustWork = TRUE)
-#' filter_type = c("gene")
-#' genes <-assign_SNPs_to_genes(gwas_data, LD, demo_genes_file, filter_type, 1000, 0.8, 2)
-assign_SNPs_to_genes <-
-    function(gwas_data,
-             LD,
-             gff_file,
-             filter_type,
-             window,
-             r_squared_cutoff,
-             num_cores) {
-        
-        full_gff <- as.data.frame(rtracklayer::readGFF(gff_file, filter=list(type=filter_type))) %>%
-            select(.data$seqid,
-                   .data$start,
-                   .data$end,
-                   .data$Name)
-        chromosomes <- as.character.factor(
-            full_gff %>%
-                dplyr::select(.data$seqid) %>%
-                dplyr::arrange(.data$seqid) %>%
-                unique() %>%
-                dplyr::pull(.data$seqid)
+#' GFF = system.file("extdata", "genes.gff.gz", package = "PAST", 
+#'   mustWork = TRUE)
+#' genes <- assign_SNPs_to_genes(gwas_data, LD, GFF, "gene", 1000, 0.8, "Name")
+assign_SNPs_to_genes <- function(gwas_data,
+                                 LD,
+                                 GFF_file,
+                                 filter_type = c("gene"),
+                                 window,
+                                 r_squared_cutoff,
+                                 name_attribute) {
+    
+    # PAST technically accepts a data.table of genes or a path to a GFF file.
+    # However, PAST only accepts a data.table because doing so makes working
+    #   with PAST Shiny easier. Users should pass a path.
+    # PAST only needs five GFF columns.
+    # Read the GFF-file, selecting only those columns and naming them.
+    # Get the names of all fields in the attributes column.
+    # Split the attributes column by ";", naming the columns based on the
+    #   attribute name.
+    # Set the name of the column containing the gene name to "name".
+    # Drop the other attribute columns.
+    if (data.table::is.data.table(GFF_file) == FALSE) {
+        GFF_columns <- c("seqid", "type", "start", "end", "attributes")
+        GFF <- data.table::fread(GFF_file, 
+                                 select = c("V1", "V3", "V4", "V5", "V9"),
+                                 col.names = GFF_columns
         )
-        
-        cl <- parallel::makeCluster(num_cores)
-        clusterEvalQ(cl, {library(dplyr); library(GenomicRanges)})
-        
-        all_genes <- NULL
-        
-        # UP/DOWNSTREAM LOOP
-        for (i in seq_along(c(1, 2))) {
-            
-            # BEGIN PROCESSING BY CHROMOSOMES LOOP
-            for (chromosome in names(LD)) {
-                
-                if (chromosome %in% chromosomes) {
-                    temp_data <-
-                        LD[[chromosome]] %>%
-                        dplyr::mutate(Marker1 = paste0(.data$Locus,
-                                                       "_",
-                                                       .data$Position1),
-                                      Marker2 = paste0(.data$Locus,
-                                                       "_",
-                                                       .data$Position2)) %>%
-                        dplyr::arrange(.data$Position1)
-                    
-                    if (i == 2) {
-                        temp_data <-
-                            temp_data %>%
-                            dplyr::mutate(
-                                temp_p2 = .data$Position1,
-                                temp_s2 = .data$Site1,
-                                temp_Marker2 = .data$Marker1,
-                                Position1 = .data$Position2,
-                                Site1 = .data$Site2,
-                                Marker1 = .data$Marker2
-                            ) %>%
-                            dplyr::mutate(
-                                Site2 = .data$temp_s2,
-                                Position2 = .data$temp_p2,
-                                Marker2 = .data$temp_Marker2,
-                                temp_s2 = NULL,
-                                temp_p2 = NULL,
-                                temp_Marker2 = NULL
-                            ) %>%
-                            dplyr::arrange(.data$Site1)
-                    }
-                    split <- 1000
-                    temp_data_list <- split(temp_data, temp_data$Position1)
-                    temp_data_list_split <- split(temp_data_list,
-                                                  ceiling(seq_along(temp_data_list)
-                                                          /split))
-                    
-                    temp_data <- parLapply(cl, 
-                                           temp_data_list_split, 
-                                           determine_linkage, 
-                                           r_squared_cutoff = r_squared_cutoff) %>%
-                        bind_rows()
-                    
-                    gwas_data_for_chromosome <-
-                        dplyr::filter(gwas_data,
-                                      .data$Chr == as.integer(chromosome))
-                    
-                    # look up p-value and effect data for SNP1
-                    temp_data <-
-                        merge(gwas_data_for_chromosome, temp_data,
-                              by.x = "Marker",
-                              by.y = "Marker1") %>%
-                        dplyr::mutate(Marker1 = .data$Marker,
-                                      SNP1_pvalue = .data$p,
-                                      SNP1_effect = .data$Effect.x) %>%
-                        dplyr::select(
-                            .data$Locus,
-                            .data$Position1,
-                            .data$Position2,
-                            .data$Site1,
-                            .data$Site2,
-                            .data$Dist_bp,
-                            .data$R.2,
-                            .data$Marker1,
-                            .data$SNP1_pvalue,
-                            .data$SNP1_effect,
-                            .data$Marker2
-                        )
-                    
-                    # look up p-value and effect data for SNP2
-                    temp_data <-
-                        merge(gwas_data_for_chromosome, temp_data,
-                              by.x = "Marker",
-                              by.y = "Marker2",
-                              all.y = TRUE) %>%
-                        dplyr::mutate(Marker2 = .data$Marker,
-                                      SNP2_pvalue = .data$p,
-                                      SNP2_effect = .data$Effect.x) %>%
-                        dplyr::select(
-                            .data$Locus,
-                            .data$Position1,
-                            .data$Site1,
-                            .data$Position2,
-                            .data$Site2,
-                            .data$Dist_bp,
-                            .data$R.2,
-                            .data$Marker1,
-                            .data$SNP1_pvalue,
-                            .data$SNP1_effect,
-                            .data$Marker2,
-                            .data$SNP2_pvalue,
-                            .data$SNP2_effect
-                        ) %>%
-                        dplyr::arrange(.data$Position1)
-                    
-                    singles = temp_data %>% dplyr::group_by(.data$Marker1) %>%
-                        dplyr::summarise(count = n(), .groups = "drop_last") %>%
-                        dplyr::filter(count == 1)
-                    
-                    linked_to_one <- temp_data %>% 
-                        filter(.data$Marker1 %in% singles$Marker1, 
-                               .data$R.2 > r_squared_cutoff) %>%
-                        mutate(linked_snp_count = 1)
-                    
-                    linked_to_none <- temp_data %>% 
-                        filter(.data$Marker1 %in% singles$Marker1, 
-                               .data$R.2 <= r_squared_cutoff) %>%
-                        mutate(linked_snp_count = 0)
-                    
-                    blocks <- temp_data %>% 
-                        filter(!(.data$Marker1 %in% singles$Marker1))
-                    
-                    blocks <- blocks %>% filter(!(is.na(.data$SNP2_effect)))
-                    
-                    if (nrow(blocks == 0)) {
-                        index <- c(0, cumsum(abs(diff(blocks$Site2)) > 1))
-                        temp_data_list <- split(blocks, 
-                                                paste(blocks$Position1, index))
-                        
-                        temp_data <- parLapply(cl, 
-                                               temp_data_list, 
-                                               find_representative_SNP, 
-                                               r_squared_cutoff = r_squared_cutoff) %>%
-                            bind_rows()
-                        
-                        temp_data <- rbind(temp_data, linked_to_one, linked_to_none) %>% 
-                            arrange(.data$Position1)
-                    } else {
-                        temp_data <- rbind(linked_to_one, linked_to_none) %>% 
-                            arrange(.data$Position1)
-                    }
-                    
-                    split <- 4
-                    snp_list <-
-                        split(temp_data,
-                              rep(seq_len(split),
-                                  length.out = nrow(temp_data),
-                                  each = ceiling(nrow(temp_data) / split)
-                              ))
-                    
-                    # subset gff to only handle this chromosome
-                    gff <- dplyr::filter(full_gff, .data$seqid == chromosome) %>%
-                        mutate(seqid = as.character.factor(.data$seqid))
-                    
-                    # get genes in parallel
-                    chromosome_genes <- parLapply(cl, 
-                                                  snp_list, 
-                                                  assign_chunk, 
-                                                  gff = gff, 
-                                                  window = window) %>%
-                        bind_rows()
-                    
-                    all_genes <- rbind(all_genes, 
-                                       chromosome_genes %>% 
-                                           arrange(.data$position))
-                }
+        GFF <- GFF[type == filter_type]
+        names <- unique(gsub("=.+", "", unlist(strsplit(GFF[,attributes], ";"))))
+        GFF[, rep(names) := data.table::tstrsplit(attributes, ";", 
+                                                  fixed = TRUE,
+                                                  names = names)][,
+                                                                  attributes := NULL
+                                                  ]
+        data.table::setnames(GFF, name_attribute, "name")
+        GFF[, names[names != name_attribute] := NULL]
+        GFF[, name := gsub(".*=", "", name)] 
+    }
+    
+    # Subset the LD data by discarding chromosomes not in the GFF.
+    initial_data <- LD[locus %in% GFF$seqid]
+    initial_data[, marker1 := paste(locus, position1, sep = "_")]
+    initial_data[, marker2 := paste(locus, position2, sep = "_")]
+    
+    # Group the data by locus and position1.
+    # For every group, check to see whether all of the rows are unlinked.
+    # If all rows are unlinked, find the row with the smallest distance between
+    #   SNP1 and SNP2.
+    # Otherwise, drop the unlinked rows.
+    linkage <- initial_data[, {
+        if (sum(.SD$r_squared < r_squared_cutoff) == .N) {
+            .SD[which.min(distance)]
+        } else {
+            .SD[r_squared > r_squared_cutoff]
+        }
+    }, by = .(locus, position1)]
+    
+    # Merge GWAS data markers, effects, and p-values with linkage data where
+    #   marker in the GWAS data is equal to marker1 in the linkage data.
+    # Set the names to show that this data is associated with SNP1.
+    # Drop markers where there was no match.
+    linkage_with_effects <- gwas_data[,c("marker", "effect", "p-value")][
+        linkage, 
+        on = .(marker = marker1)
+    ]
+    setnames(linkage_with_effects, 
+             c("marker", "effect", "p-value"),
+             c("marker1", "effect1", "p-value1")
+    )
+    linkage_with_effects <- na.omit(linkage_with_effects, cols = "effect1")
+    
+    # Merge GWAS data markers, effects, and p-values with linkage data where
+    #   marker in the GWAS data is equal to marker2 in the linkage data.
+    # Set the names to show that this data is associated with SNP2.
+    # Drop markers where there was no match.
+    linkage_with_effects <- gwas_data[,c("marker", "effect", "p-value")][
+        linkage_with_effects, 
+        on = .(marker = marker2)
+    ]
+    setnames(linkage_with_effects, 
+             c("marker", "effect", "p-value"),
+             c("marker2", "effect2", "p-value2")
+    )
+    setcolorder(linkage_with_effects,
+                c("locus", 
+                  "marker1", "position1", "site1", "effect1", "p-value1",
+                  "marker2", "position2", "site2", "effect2", "p-value2",
+                  "distance", "r_squared"
+                )
+    )
+    setorder(linkage_with_effects, locus, position1)
+    
+    # Mark blocks of SNPs where position1 is the same and site2 is consecutive.
+    # Select only blocks of SNPs where there is more than one SNP with the same
+    #   marker1.
+    # Order these blocks by locus, position1, site1, and site2.
+    # Omit any SNPs that have no effect2 data.
+    # Create a difference column to detect consecutive site2s.
+    # Set the first row's difference to 0.
+    # Create a block column based on the cumulative sum of the difference
+    #   column.
+    # Set the number of linked SNPs. SNPs with R^2 less than the cutoff are
+    #   unlinked. SNPs with R^2 than the cutoff are considered linked to the
+    #   number of SNPs in the block.
+    # Blocks with an equal number of positive and negative SNPs are marked with
+    #   a number of linked SNPs equal to -1.
+    block_SNPs <- linkage_with_effects[, SNPs := .N, by=.(marker1)][
+        SNPs > 1
+    ]
+    data.table::setorder(block_SNPs, locus, position1, site1, site2)
+    block_SNPs <- na.omit(block_SNPs, cols = "effect2")
+    block_SNPs[, difference := abs(site2 - data.table::shift(site2, 1, "lag", fill = 0)) > 1 |
+                   position1 != data.table::shift(position1, 1, "lag", fill = 0)]
+    block_SNPs[1L, difference := 0]
+    block_SNPs[, block := cumsum(difference)]
+    block_SNPs[, linked_snp_count := -999]
+    
+    # Process the blocks to find the single SNP that best represents each block.
+    # Group by the locus, position1, and block columns.
+    # Count negative and positive effects in the block.
+    # If there are more positive effects, sort the block by descending effect2
+    #   and distance.
+    # If there are more negative effects, sort the block by effect2 and distance.
+    # If there are an equal number of positive and negative effects, then check
+    #   the p-value of the first SNP in the block.
+    # If that p-value is positive, sort the block by descending effect2 and 
+    #   distance.
+    # If that p-value is negative, sort the block by effect2 and distance.
+    # Return the first row of the block, which is the SNP with the largest most
+    #   negative effect if there were more negative SNPs or the most positive
+    #   effect if there were more positive SNPs.
+    block_SNPs = block_SNPs[, {
+        SNPs_in_block = .N
+        negative <- .SD[effect2 < 0][, .N]
+        positive <- .SD[effect2 > 0][, .N]
+        subdata = data.table::copy(.SD)
+        subdata[r_squared < r_squared_cutoff, linked_snp_count := as.numeric(0)]
+        subdata[r_squared >= r_squared_cutoff, linked_snp_count := as.numeric(SNPs_in_block)]
+        if (positive > negative) {
+            data.table::setorder(subdata, -effect2, distance)
+        } else if (negative > positive) {
+            data.table::setorder(subdata, effect2, distance)
+        } else if (negative == positive) {
+            subdata[, linked_snp_count := as.numeric(-1)]
+            if (subdata[1, effect1] > 0) {
+                data.table::setorder(subdata, -effect2, distance)
+            } else {
+                data.table::setorder(subdata, effect2, distance)
             }
         }
-        
-        group_by_gene <- split(all_genes, f = all_genes$name)
-        representative_genes <-parLapply(cl, 
-                                         group_by_gene, 
-                                         find_representative_SNP_gene_pairing) %>%
-            bind_rows()
-        stopCluster(cl)
-        representative_genes <- merge(representative_genes %>% mutate(Marker = paste0(chromosome, "_", position)),
-                                      gwas_data, 
-                                      by = "Marker"
-        ) %>% select(marker = Marker_original,
-                     chromosome,
-                     position,
-                     effect,
-                     p.value,
-                     linked_snp_count,
-                     name) %>% 
-            arrange(marker)
-    }
+        subdata[1L]
+    },
+    by = block]
+    block_SNPs[, c("block", "SNPs", "difference") := NULL]
+    data.table::setcolorder(block_SNPs,
+                            c("locus", 
+                              "marker1", "position1", "site1", "effect1", "p-value1",
+                              "marker2", "position2", "site2", "effect2", "p-value2",
+                              "distance", "r_squared", "linked_snp_count"
+                            )
+    )
+    data.table::setorder(block_SNPs, locus, position1, site1, site2)
+    
+    # Determine whether single SNPs are linked to their SNP2 or not.
+    # Select only blocks of SNPs where there is only one SNP at that position.
+    # Set the number of linked SNPs. SNPs with R^2 less than the cutoff are
+    #   unlinked. SNPs with R^2 than the cutoff are considered linked.
+    single_SNPs <- linkage_with_effects[, SNPs := .N, by=.(marker1)][
+        SNPs == 1
+    ][r_squared < r_squared_cutoff, linked_snp_count := 0][
+        r_squared >= r_squared_cutoff, linked_snp_count := 1]
+    single_SNPs[, SNPs := NULL]
+    
+    # Bind the SNPs representing blocks of SNPs to the single and unlinked SNPs.
+    # Order the data.
+    representative_SNPs = data.table::rbindlist(list(block_SNPs, single_SNPs))
+    data.table::setorder(representative_SNPs, locus, position1, site1, site2)
+    
+    # Find tag SNPs - either SNP1 or SNP2 which represents the pair.
+    # If effect1 and effect2 are equal, always select SNP2.
+    tagSNPs = representative_SNPs[effect1 == effect2, SNP := "SNP2"]
+    
+    # If SNP1 and SNP2 are not linked, select SNP1.
+    tagSNPs[linked_snp_count == 0, SNP := "SNP1"]
+    
+    # If SNP1 and SNP2 are linked to each other and their effects have the same sign,
+    #   choose the SNP with the highest absolute effect.
+    tagSNPs[linked_snp_count == 1 & effect1 * effect2 > 0 & abs(effect1) > abs(effect2), SNP := "SNP1"]
+    tagSNPs[linked_snp_count == 1 & effect1 * effect2 > 0 & abs(effect1) < abs(effect2), SNP := "SNP2"]
+    
+    # If SNP1 and SNP2 are linked to each other and their effects have different 
+    #   signs, choose the SNP with the lower p-value.
+    tagSNPs[linked_snp_count == 1 & effect1 * effect2 < 0 & `p-value1` > `p-value2`, SNP := "SNP2"]
+    tagSNPs[linked_snp_count == 1 & effect1 * effect2 < 0 & `p-value1` < `p-value2`, SNP := "SNP1"]
+    
+    # If the linkage represents a block of SNPs and and their effects have different 
+    #   signs or the distance between the SNPs is greater than the search window, 
+    #   choose SNP2.
+    tagSNPs[linked_snp_count > 1 & effect1 * effect2 < 0, SNP := "SNP2"]
+    tagSNPs[linked_snp_count > 1 & distance >= window, SNP := "SNP2"]
+    
+    # If the linkage represents a block of SNPs and their effects have the same
+    #   signs and the distance between the SNPs is smaller than the search 
+    #   window, choose the SNP with the highest absolute effect.
+    tagSNPs[linked_snp_count > 1 & effect1 * effect2 > 0 & distance < window & abs(effect1) > abs(effect2), SNP := "SNP1"]
+    tagSNPs[linked_snp_count > 1 & effect1 * effect2 > 0 & distance < window & abs(effect1) < abs(effect2), SNP := "SNP2"]
+    
+    # If the linkage represents a block of SNPs with the same number of positive
+    #   and negative effects and their effects have the same sign, choose the SNP 
+    #   with the highest absolute effect.
+    tagSNPs[linked_snp_count == -1 & effect1 * effect2 > 0 & abs(effect1) > abs(effect2), SNP := "SNP1"]
+    tagSNPs[linked_snp_count == -1 & effect1 * effect2 > 0 & abs(effect1) < abs(effect2), SNP := "SNP2"]
+    
+    # If the linkage represents a block of SNPs with the same number of positive
+    #   and negative effects and their effects have different signs, note that
+    #   the linkage is problematic.
+    tagSNPs[linked_snp_count == -1 & effect1 * effect2 < 0, SNP := "PROBLEM"]
+    
+    # Set position, effect, and p-value to the values for the tag SNP.
+    tagSNPs[SNP == "SNP1", position := position1]
+    tagSNPs[SNP == "SNP1", effect := effect1]
+    tagSNPs[SNP == "SNP1", `p-value` := `p-value1`]
+    tagSNPs[SNP == "SNP2", position := position2]
+    tagSNPs[SNP == "SNP2", effect := effect2]
+    tagSNPs[SNP == "SNP2", `p-value` := `p-value2`]
+    
+    # Change the name of the locus column to chromosome, drop rows with no 
+    #   position, and select only needed columns.
+    # Add start and end columns equal to the position column in preparation for
+    #   finding intersections with the GFF.
+    # Order the data.
+    data.table::setnames(tagSNPs, "locus", "chromosome")
+    tagSNPs <- na.omit(tagSNPs, cols = "position")
+    tagSNPs = tagSNPs[, .(chromosome, position, effect, `p-value`, distance, linked_snp_count)]
+    tagSNPs[, start := position]
+    tagSNPs[, end := position]
+    data.table::setorder(tagSNPs, chromosome, position, distance, linked_snp_count)
+    
+    # Add the search window to the gene coordinates.
+    # Key the GFF data.table by sequence ID, start, and end in preparation for
+    #   finding intersections with the tag SNPs
+    GFF[, start := start - window]
+    GFF[, end := end + window]
+    data.table::setkey(GFF, seqid, start, end)
+    
+    # Key the tag SNP data.table by sequence ID, start, and end in preparation for
+    #   finding intersections with the GFF.
+    data.table::setkey(tagSNPs, chromosome, start, end)
+    
+    # Find overlaps between the tag SNPs and GFF, dropping rows from the tag SNPs
+    #   with no match in the GFF.
+    # Only keep specified columns.
+    # Order the data, and set number of linked SNPs equal to 1 for any SNPs with a
+    #   number of linked SNPs less than or equal to 0.
+    genes = data.table::foverlaps(tagSNPs, GFF, nomatch = NULL)[, .(chromosome, 
+                                                                    position, 
+                                                                    effect, 
+                                                                    `p-value`, 
+                                                                    linked_snp_count, 
+                                                                    name)
+    ]
+    data.table::setorder(genes, chromosome, position, effect, `p-value`, linked_snp_count, name)
+    genes[linked_snp_count <= 0, linked_snp_count := 1]
+    
+    # Find the SNP-gene pairing that best represents all SNPs linked to the same
+    #   gene.
+    # Sum the number of linked SNPs with negative effects and the number of linked
+    #   SNPs with positive effects.
+    # If there are more positive SNPs linked to the gene, sort by descending
+    #   effect and ascending p-value. Select the first SNP in the sub-data.table.
+    # If there are more negative SNPs linked to the gene, sort by ascending
+    #   effect and p-value. Select the first SNP in the sub-data.table.
+    # If there are an equal number of SNPs with positive and negative effects
+    #   linked to the gene, select the SNP with the largest absolute effect.
+    # Set the number of linked SNPs to all SNPs linked to the gene.
+    # Set the column order and order the data.
+    genes = genes[, {
+        negative <- .SD[effect < 0, sum(linked_snp_count)]
+        positive <- .SD[effect > 0, sum(linked_snp_count)]
+        subdata = data.table::copy(.SD)
+        if (positive > negative) {
+            data.table::setorder(subdata, -effect, `p-value`)
+            subdata = subdata[1L]
+        } else if (negative > positive) {
+            data.table::setorder(subdata, effect, `p-value`)
+            subdata = subdata[1L]
+        } else if (negative == positive) {
+            max_positive = data.table::setorder(subdata[effect > 0], -effect, `p-value`)[1L]
+            max_negative = data.table::setorder(subdata[effect < 0], effect, `p-value`)[1L]
+            
+            if(max_positive[, effect] >= abs(max_negative[, effect])) {
+                subdata = max_positive
+            } else {
+                subdata = max_negative
+            }
+        }
+        subdata[, linked_snp_count := negative + positive]
+    },
+    by = .(name)]
+    data.table::setcolorder(genes, c("chromosome","position", "effect", "p-value", "linked_snp_count", "name"))
+    data.table::setorder(genes, chromosome, position, effect, `p-value`, linked_snp_count, name)
+    
+    # Retrieve the original marker and rename the marker_original column to marker.
+    genes = gwas_data[,c("marker", "marker_original")][
+        genes[, marker := paste(chromosome, position, sep = "_")], 
+        on = .(marker = marker)
+    ]
+    genes[, marker := NULL]
+    data.table::setnames(genes, "marker_original", "marker")
+    
+    return(genes)
+}
