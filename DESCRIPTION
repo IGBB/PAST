@@ -12,19 +12,11 @@ Description: PAST takes GWAS output and assigns SNPs to genes, uses those genes
 License: GPL (>=3) + file LICENSE
 Encoding: UTF-8
 Depends: R (>= 4.0)
-Imports: stats, 
+Imports: 
     utils, 
-    dplyr, 
-    rlang, 
-    iterators, 
-    parallel, 
-    foreach, 
-    doParallel, 
     qvalue,
-    rtracklayer,
+    data.table,
     ggplot2,
-    GenomicRanges,
-    S4Vectors
 Suggests: 
     knitr,
     rmarkdown

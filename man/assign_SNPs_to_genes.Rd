@@ -7,28 +7,32 @@
 assign_SNPs_to_genes(
   gwas_data,
   LD,
-  gff_file,
-  filter_type,
+  GFF_file,
+  filter_type = c("gene"),
   window,
   r_squared_cutoff,
-  num_cores
+  name_attribute
 )
 }
 \arguments{
-\item{gwas_data}{Merged association and effects data from merge_data()}
+\item{gwas_data}{GWAS data from load_GWAS_data()}
 
-\item{LD}{Linkage disequilibrium data from parse_LD()}
+\item{LD}{linkage disequilibrium data from load_LD()}
 
-\item{gff_file}{The path to a GFF file}
+\item{GFF_file}{the path to a GFF-formatted of annotations.}
 
-\item{window}{The search window for genes around the SNP}
+\item{window}{the search window for genes around the SNP}
 
-\item{r_squared_cutoff}{The R^2 value used to determine SNP significance}
+\item{r_squared_cutoff}{the R^2 value used to determine SNP significance}
 
-\item{num_cores}{The number of cores to use in parallelizing PAST}
+\item{name_attribute}{the field in the 9th column of the GFF file that
+contains the desired gene name (for example, the 9th column might look like
+ID=NNN;Name=NNN;description=NNN - to use the name in the Name field, provide
+"Name")}
 }
 \value{
-A dataframe of genes from the SNP data
+a data.table of SNP-gene assignments, reduced to the SNP that best
+represents all SNPs assigned to the same gene for each gene
 }
 \description{
 Assign SNPs to genes
@@ -36,8 +40,7 @@ Assign SNPs to genes
 \examples{
 example("load_GWAS_data")
 example("load_LD")
-demo_genes_file = system.file("extdata", "genes.gff",
-  package = "PAST", mustWork = TRUE)
-filter_type = c("gene")
-genes <-assign_SNPs_to_genes(gwas_data, LD, demo_genes_file, filter_type, 1000, 0.8, 2)
+GFF = system.file("extdata", "genes.gff.gz", package = "PAST", 
+  mustWork = TRUE)
+genes <- assign_SNPs_to_genes(gwas_data, LD, GFF, "gene", 1000, 0.8, "Name")
 }

@@ -1,293 +1,205 @@
-get_factors <- function(gene_ranks) {
-  factors <- vector("logical", length(gene_ranks))
-  factors[1] <- gene_ranks[1] - 1
-  for (i in 2:length(gene_ranks)) {
-    factors[i] <- gene_ranks[i] - gene_ranks[i - 1] - 1 + factors[i - 1]
-  }
-  factors
-}
-
-get_pmisses <- function(temp_data, genes_in_pathway, factors) {
-  pmisses <- factors / (nrow(temp_data) - nrow(genes_in_pathway))
-  pmisses
-}
-
-get_phits <- function(gene_effects) {
-  NR <- sum(abs(gene_effects))
-  absolute <- abs(gene_effects)
-  phits <- vector("logical", length(gene_effects))
-  phits[1] <- (absolute[1] / NR)
-  for (i in 2:length(gene_effects)) {
-    phits[i] <- absolute[i] / NR + phits[i - 1]
-  }
-  phits
-}
-
-get_running_enrichment_score <- function(phits, pmisses) {
-  running_enrichment_score <- phits - pmisses
-  running_enrichment_score
-}
-
-find_max <- function(running_enrichment_score) {
-  running_enrichment_score <- sort(running_enrichment_score, decreasing = TRUE)
-  max <- running_enrichment_score[[1]]
-  max
-}
-
-# This isn't really global, but R CMD check
-# doesn't understand how to deal with variable
-# created by foreach loops
-globalVariables("pathway")
-
 #' Find Pathway Significance
 #'
-#' @param genes Genes from assign_SNPs_to_genes()
-#' @param pathways_file A file containing the pathway IDs, their names, and the
-#'   genes in the pathway
-#' @param gene_number_cutoff A cut-off for the minimum number of genes in a
-#'   pathway
-#' @param mode increasing/decreasing
-#' @param sample_size How many times to sample the effects data during random
+#' @param genes genes from assign_SNPs_to_genes()
+#' @param pathways_file a file containing the pathway IDs, their names, and the
+#'   genes in the pathway with one row per gene for every pathway
+#' @param gene_number_cutoff a cut-off for the minimum number of genes in a
+#'   pathway; pathways that don't satisfy this requirement are removed from analysis
+#' @param analysis_mode increasing/decreasing, where increasing analysis mode 
+#' tests whether pathways are associated with an increase in the measured trait 
+#' and decreasing analysis mode tests whether pathways are associated with a 
+#' decrease in the measured trait 
+#' @param permutations How many times to sample the effects data during random
 #'   sampling
-#' @param num_cores The number of cores to use in parallelizing PAST
-#' @importFrom rlang .data
-#' @importFrom stats pnorm
-#' @importFrom stats sd
-#' @import dplyr
-#' @import foreach
-#' @import doParallel
-#' @import iterators
-#' @import parallel
+#' @import data.table
 #' @import qvalue
-#' @return Rugplots data
+#' @return enrichment data that indicates which pathways are significantly
+#' associated with the trait (via p-value/q-value) and contains information for
+#' plotting running enrichment score for genes in a pathway
 #' @export
 #'
 #' @examples
 #' example("assign_SNPs_to_genes")
-#' demo_pathways_file = system.file("extdata", "pathways.txt.xz",
-#'   package = "PAST", mustWork = TRUE)
-#' rugplots_data <- find_pathway_significance(genes, demo_pathways_file, 5,
-#'   "increasing", 1000, 2)
+#' pathways = system.file("extdata", "pathways.txt.gz", package = "PAST", 
+#' mustWork = TRUE)
+#' enrichment_data <- find_pathway_significance(genes, pathways, 5, "increasing", 1000)
 find_pathway_significance <-
   function(genes,
-           pathways_file,
+           pathways,
            gene_number_cutoff = 5,
-           mode,
-           sample_size = 1000,
-           num_cores) {
-    # load pathways
-    pathways <-
-      read.table(pathways_file,
-                 sep = "\t",
-                 header = TRUE,
-                 quote = "")
-
-    # sample to create 1000 random distributions
-    effects <- genes %>% dplyr::select(.data$name, .data$effect)
-    effects <-
-      cbind(effects, vapply(seq_len(sample_size),
-                            function(i) sample(effects$effect),
-                            FUN.VALUE = double(nrow(effects))))
-
-    pathways_unique <- unique(select(pathways, .data$pathway_id))
-    pathways_unique[] <- lapply(pathways_unique, as.character)
-
-    # process sample columns
-    cl <- parallel::makeCluster(num_cores, outfile = "")
-    registerDoParallel(cl)
-    column_observations <-
-      foreach(
-        i = iter(2:(sample_size + 2)),
-        .combine = cbind,
-        .packages = c("dplyr", "PAST", "foreach", "iterators")
-      ) %dopar% {
-        temp_data <-
-          data.frame(matrix("NA", ncol = 2, nrow = nrow(effects)))
-        colnames(temp_data) <- c("gene", "effect")
-        temp_data$effect <- effects[, i]
-        temp_data$gene <- effects[, 1]
-
-        if (mode == "decreasing") {
-          temp_data <- temp_data %>%
-            dplyr::arrange(.data$effect) %>%
-            dplyr::mutate(rank = row_number(),
-                          effect = abs(.data$effect))
-        } else if (mode == "increasing") {
-          temp_data <- temp_data %>%
-            dplyr::arrange(desc(.data$effect)) %>%
-            dplyr::mutate(rank = row_number())
-        } else {
-          stop("Incorrect mode.")
-        }
-
-        column_observation <- data.frame()
-
-        foreach(pathway = iter(pathways_unique$pathway_id, by = "row")) %do% {
-          genes_in_pathway <-
-            dplyr::filter(pathways, pathways$pathway_id == pathway) %>%
-            filter(!(is.na(gene_id)))
-
-          ## get ranks and effects and sort by rank
-          genes_in_pathway <-
-            merge(genes_in_pathway,
-                  temp_data,
-                  by.x = "gene_id",
-                  by.y = "gene") %>%
-            dplyr::arrange(.data$rank) %>% unique()
-
-          # check cutoff
-          if (nrow(genes_in_pathway) >= gene_number_cutoff) {
-
-            # get factors using rank
-            factors <- get_factors(genes_in_pathway$rank)
-
-            # get pmisses
-            pmisses <- get_pmisses(temp_data, genes_in_pathway, factors)
-
-            # get phits
-            phits <- get_phits(genes_in_pathway$effect)
-
-            # get phits-pmisses
-            running_enrichment_score <- get_running_enrichment_score(phits, pmisses)
-            find_max(running_enrichment_score)
-            # store max phit_pmisses
-            column_observation <-
-              rbind(column_observation, find_max(running_enrichment_score))
-          } else {
-            column_observation <- rbind(column_observation, NA)
-          }
-        }
-        column_observation
-      }
-
-    stopCluster(cl)
-
-    pathways_unique <- cbind(pathways_unique, column_observations)
-    colnames(pathways_unique) <-
-      c("Pathway", "ES_Observed", seq_len(sample_size))
-    colnames(pathways_unique)[3:(sample_size + 2)] <-
-      paste0("ES", colnames(pathways_unique)[3:(sample_size + 2)])
-    pathways_unique <- pathways_unique %>%
-      dplyr::filter(!is.na(.data$ES_Observed))
-    pathways_unique <- pathways_unique %>%
-      dplyr::mutate(permutation_mean =
-                      apply(pathways_unique[, 3:(sample_size + 2)], 1, mean))
-    pathways_unique <- pathways_unique %>%
-      dplyr::mutate(permutation_standard_deviation =
-                      apply(pathways_unique[, 3:(sample_size + 2)], 1, sd))
-    pathways_unique <- pathways_unique %>%
-      dplyr::mutate(
-        NES_Observed = (.data$ES_Observed - .data$permutation_mean) / .data$permutation_standard_deviation
-      )
-    for (i in seq_along(sample_size)) {
-      pathways_unique[i + 2] <-
-        (pathways_unique[i + 2] - pathways_unique[sample_size + 3]) / pathways_unique[sample_size + 4]
+           analysis_mode,
+           permutations = 1000) {
+    
+    # Read pathways file.
+    # PAST technically accepts a data.table of pathways or a path to a file
+    #   containing pathways information.
+    # However, PAST only accepts a data.table because doing so makes working
+    #   with PAST Shiny easier. Users should pass a path.
+    if (data.table::is.data.table(pathways) == FALSE) {
+      pathways <- data.table::fread(pathways, quote = "")  
     }
-    pathways_unique <- pathways_unique %>%
-      dplyr::mutate(pvalue = 1-pnorm(.data$NES_Observed))
-    pathways_unique <-dplyr::arrange(pathways_unique, .data$pvalue)
-    pathways_unique <- pathways_unique %>%
-      dplyr::select(.data$Pathway,
-                    .data$ES_Observed,
-                    .data$NES_Observed,
-                    .data$pvalue) %>%
-      dplyr::mutate(qvalue = qvalue(
-        pathways_unique$pvalue,
-        lambda = 0,
-        fdr.level = 0.05
-      )$qvalues)
-
-    pathways_significant <- pathways_unique %>%
-      dplyr::select(.data$Pathway,
-                    .data$NES_Observed,
-                    .data$pvalue,
-                    .data$qvalue) %>%
-      dplyr::mutate(pathway_number = row_number(), NESrank = NULL)
-
-    temp_data <-
-      data.frame(matrix("NA", ncol = 2, nrow = nrow(effects)))
-    colnames(temp_data) <- c("Gene", "Effect")
-    temp_data$Effect <- effects[, 2]
-    temp_data$Gene <- effects[, 1]
-    colnames(temp_data) <- c("Gene", "Effect")
-    if (mode == "decreasing") {
-      temp_data <- temp_data %>%
-        dplyr::arrange(.data$Effect) %>%
-        dplyr::mutate(rank = row_number(),
-                      effect = abs(.data$Effect))
-    } else if (mode == "increasing") {
-      temp_data <- temp_data %>%
-        dplyr::arrange(desc(.data$Effect)) %>%
-        dplyr::mutate(rank = row_number())
+    
+    # Order the pathways data and drop duplicate entries.
+    setkey(pathways)
+    pathways <- unique(pathways)
+    
+    # PAST computes pathway significance based on a null distribution generated
+    #   from permutations of the true effects and a user-provided number of
+    #   permutations.
+    # Effects are sorted and ranked based on the provided analysis mode.
+    # - "increasing" sorts effects from most positive to most negative.
+    # - "decreasing" sorts effects from most negative to most positive and 
+    #      converts the effects to the absolute value of the effects.
+    effects = data.table::copy(genes[, .(name, effect)])
+    data.table::setnames(effects, "name", "gene")
+    data.table::setnames(effects, "effect", "effect0")
+    if (analysis_mode == "increasing") {
+      setorder(effects, -effect0)
+    } else if (analysis_mode == "decreasing") {
+      setorder(effects, effect0)
+      effects[, paste("effect", column, sep="") := abs(paste("effect", column, sep=""))]
     } else {
-      stop("Incorrect mode.")
+      stop("Analysis mode must be \"increasing\" or \"decreasing\".")
     }
-
-    rugplots_data <- NULL
-    rugplots_data <-
-      foreach(
-        pathway = iter(pathways_significant$Pathway, by = "row"),
-        .combine = rbind
-      ) %do% {
-        genes_in_pathway <-
-          dplyr::filter(pathways, pathways$pathway_id == pathway)
-
-        ## get ranks and effects and sort by rank
-        genes_in_pathway <-
-          merge(genes_in_pathway,
-                temp_data,
-                by.x = "gene_id",
-                by.y = "Gene") %>%
-          dplyr::arrange(rank)
-
-        # get factors using rank
-        genes_in_pathway$factors <-
-          get_factors(genes_in_pathway$rank)
-
-        # get pmisses
-        genes_in_pathway$pmisses <-
-          get_pmisses(temp_data, genes_in_pathway, genes_in_pathway$factors)
-
-        # get phits
-        genes_in_pathway$phits <- get_phits(genes_in_pathway$Effect)
-
-        # get phits-pmisses
-        genes_in_pathway$running_enrichment_score <-
-          get_running_enrichment_score(genes_in_pathway$phits, genes_in_pathway$pmisses)
-
-        # append rows with NESrank
-        genes_in_pathway <-
-          merge(genes_in_pathway,
-                pathways_significant,
-                by.x = "pathway_id",
-                by.y = "Pathway")
-        genes_in_pathway
+    effects[, rank0 := as.numeric(.I)]
+    columns = as.character(1:permutations)
+    for (column in columns) {
+      data.table::set(effects, j = paste("effect", column, sep=""), value = sample(genes[,effect]))
+      if (analysis_mode == "increasing") {
+        setorderv(effects, paste("effect", column, sep=""), -1)
+      } else if (analysis_mode == "decreasing") {
+        setorderv(effects, paste("effect", column, sep=""))
+        effects[, paste("effect", column, sep="") := abs(paste("effect", column, sep=""))]
+      } else {
+        stop("Analysis mode must be \"increasing\" or \"decreasing\".")
       }
-    rugplots_data <- merge(
-      rugplots_data %>%
-        dplyr::select(
-          .data$pathway_id,
-          .data$pathway_number,
-          .data$gene_id,
-          .data$rank,
-          .data$running_enrichment_score
-        ),
-      pathways %>%
-        dplyr::select(.data$pathway_id, .data$pathway_name) %>%
-        unique(),
-      by = "pathway_id"
-    )
-    rugplots_data <- merge(
-      rugplots_data,
-      dplyr::select(
-        pathways_unique,
-        .data$Pathway,
-        .data$pvalue,
-        .data$qvalue
-      ),
-      by.x = "pathway_id",
-      by.y = "Pathway"
-    ) %>%
-      dplyr::arrange(.data$pathway_number)
-    rugplots_data
+      effects[, paste("rank", column, sep = "") := as.numeric(.I)]
+    }
+    
+    # Find enrichment score for permutations.
+    # Count the number of genes overall.
+    # Filter pathways such that only genes with an effect are kept.
+    number_of_genes = genes[,.N]
+    enrichment_scores = copy(pathways[ 
+      effects[gene %in% pathways[,gene_id]],
+      on = .(gene_id = gene)
+    ])
+    
+    # Find enrichment score for each permutation of the effects.
+    # Show progress by pathway_id.
+    # Method described in DOI: 10.1073/pnas.0506580102
+    number_of_pathways = uniqueN(enrichment_scores$pathway_id)
+    progress <- utils::txtProgressBar(min = 0, max = number_of_pathways, style = 3)
+    enrichment_scores[, (paste0("enrichment_score", c(0:permutations))) := lapply(c(0:permutations), function(column) {
+      setorderv(.SD, paste0("rank", column))
+      
+      # Calculate factors.
+      # Factors are calculated by subtracting 1 + the rank of the previous gene
+      #   from the rank of the current gene.
+      # The cumulative sum of the factors per row is calculated and added to the
+      #   previously calculated factor.
+      factor = unlist(.SD[,paste0("rank", column), with = F] - data.table::shift(.SD[,paste0("rank", column), with = F], fill = 0) - 1)
+      factor = factor + data.table::shift(cumsum(factor), fill = 0)
+      
+      # The factor is divided by the number of genes that are not in the pathway
+      #   to calculate the pmiss.
+      pmiss = unlist(factor / (number_of_genes - .N))
+      
+      # The effect of each gene in the pathway is divided by the sum of the
+      #   absolute value of every effect in the pathway.
+      # A column is created to track the phit_base of the previous gene in the
+      #   pathway.
+      # The cumulative sum of the lagged phits per row is calculated and added 
+      # to the phit.
+      phit = unlist(abs(.SD[, paste0("effect", column), with = F]) / sum(abs(.SD[, paste0("effect", column), with = F])))
+      phit = phit + cumsum(data.table::shift(phit, fill = 0))
+      
+      # The progress bar is updated.
+      # The pmiss is subtracted from the phit to calculate the enrichment score
+      #   per gene.
+      # The maximum enrichment score from the enrichment scores of all genes in
+      #   the pathway is returned.
+      utils::setTxtProgressBar(progress, .GRP)
+      max(phit - pmiss)
+    }),
+    by = pathway_id,
+    .SDcols = names(enrichment_scores)[3:length(names(enrichment_scores))]]
+    
+    # enrichment_scores_safe = copy(enrichment_scores)
+    # enrichment_scores_safe = readRDS("enrichment_scores.Rds")
+    # saveRDS(enrichment_scores_safe, "enrichment_scores.Rds")
+    # enrichment_scores = copy(pathways_safe)
+    
+    # Drop pathways without enough genes to meet the cutoff filter.
+    # Drop rank, effect, and genes.
+    # Take the first row by pathway.
+    # Rename enrichment_score0 to enrichment_score_observed.
+    enrichment_scores = enrichment_scores[, if(.N > gene_number_cutoff) .SD, by=pathway_id]
+    enrichment_scores[, c("gene_id", paste0("rank", c(0:permutations)), paste0("effect", c(0:permutations))) := NULL]
+    enrichment_scores = enrichment_scores[, .SD[1L], by = pathway_id]
+    setnames(enrichment_scores, "enrichment_score0", "enrichment_score_observed")
+    enrichment_scores = data.table::melt(enrichment_scores, 
+                                         id.vars = c("pathway_id", 
+                                                     "pathway_name", 
+                                                     "enrichment_score_observed"),
+                                         measure.vars = paste0("enrichment_score", c(1:permutations)))
+    setkey(enrichment_scores, pathway_id)
+    enrichment_scores[,permutation_mean := mean(value)]
+    enrichment_scores[,permutation_sd := sd(value)]
+    enrichment_scores = dcast(enrichment_scores, pathway_id + pathway_name + enrichment_score_observed + permutation_mean + permutation_sd ~ variable)
+    enrichment_scores[, paste0("enrichment_score", c(1:permutations)) := NULL]
+    enrichment_scores[, normalized_enrichment_score := (enrichment_score_observed - permutation_mean) / permutation_sd]
+    enrichment_scores[, `p-value` := 1-pnorm(normalized_enrichment_score)]
+    enrichment_scores[, `q-value` := qvalue::qvalue(`p-value`, fdr.level=0.05)$qvalues]
+    enrichment_scores[, c("permutation_mean", "permutation_sd", "normalized_enrichment_score") := NULL]
+    
+    # Calculate the running enrichment scores per gene using the same method as
+    #   used for calculating the enrichment score for for a pathway.
+    # Keep per-gene enrichment scores, rather than returning the max.
+    running_enrichment_scores = copy(pathways[ 
+      effects[gene %in% pathways[,gene_id], .(gene, effect0, rank0)],
+      on = .(gene_id = gene)
+    ])
+    setnames(running_enrichment_scores, "effect0", "effect")
+    setnames(running_enrichment_scores, "rank0", "rank")
+    setorder(running_enrichment_scores, rank)
+    running_enrichment_scores[, enrichment_score := {
+      
+      # Calculate factors.
+      # Factors are calculated by subtracting 1 + the rank of the previous gene
+      #   from the rank of the current gene.
+      # The cumulative sum of the factors per row is calculated and added to the
+      #   previously calculated factor.
+      factor = unlist(.SD[, rank] - data.table::shift(.SD[, rank], fill = 0) - 1)
+      factor = factor + data.table::shift(cumsum(factor), fill = 0)
+      
+      # The factor is divided by the number of genes that are not in the pathway
+      #   to calculate the pmiss.
+      pmiss = unlist(factor / (number_of_genes - .N))
+      
+      # The effect of each gene in the pathway is divided by the sum of the
+      #   absolute value of every effect in the pathway.
+      # A column is created to track the phit_base of the previous gene in the
+      #   pathway.
+      # The cumulative sum of the lagged phits per row is calculated and added 
+      # to the phit.
+      phit = unlist(abs(.SD[, effect]) / sum(abs(.SD[, effect])))
+      phit = phit + cumsum(data.table::shift(phit, fill = 0))
+      
+      # The pmiss is subtracted from the phit to calculate the enrichment score
+      #   per gene.
+      phit - pmiss
+    },
+    by = pathway_id,
+    .SDcols = names(running_enrichment_scores)]
+    
+    # Drop pathways without enough genes to meet the cutoff filter.
+    # Combine the enrichment score data for pathways with the running enrichment
+    #   score data for genes.
+    running_enrichment_scores = running_enrichment_scores[, if(.N > gene_number_cutoff) .SD, by=pathway_id]
+    enrichment_data = enrichment_scores[
+      running_enrichment_scores[, .(pathway_id, gene_id, rank, enrichment_score)],
+      on = .(pathway_id)]
+    data.table::setorder(enrichment_data, `q-value`, pathway_id)
+    return(enrichment_data)
   }
