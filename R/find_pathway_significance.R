@@ -25,18 +25,22 @@
 #' enrichment_data <- find_pathway_significance(genes, pathways, 5, "increasing", 1000)
 find_pathway_significance <-
   function(genes,
-           pathways,
+           pathways_file,
            gene_number_cutoff = 5,
            analysis_mode,
            permutations = 1000) {
+    
+    message(data.table::getDTthreads(verbose = getOption("datatable.verbose")))
     
     # Read pathways file.
     # PAST technically accepts a data.table of pathways or a path to a file
     #   containing pathways information.
     # However, PAST only accepts a data.table because doing so makes working
     #   with PAST Shiny easier. Users should pass a path.
-    if (data.table::is.data.table(pathways) == FALSE) {
-      pathways <- data.table::fread(pathways, quote = "")  
+    if (data.table::is.data.table(pathways_file) == FALSE) {
+      pathways <- data.table::fread(pathways_file, quote = "")  
+    } else {
+      pathways <- data.table::copy(pathways_file)
     }
     
     # Order the pathways data and drop duplicate entries.
@@ -88,7 +92,7 @@ find_pathway_significance <-
     # Find enrichment score for each permutation of the effects.
     # Show progress by pathway_id.
     # Method described in DOI: 10.1073/pnas.0506580102
-    number_of_pathways = uniqueN(enrichment_scores$pathway_id)
+    number_of_pathways = data.table::uniqueN(enrichment_scores$pathway_id)
     progress <- utils::txtProgressBar(min = 0, max = number_of_pathways, style = 3)
     enrichment_scores[, (paste0("enrichment_score", c(0:permutations))) := lapply(c(0:permutations), function(column) {
       setorderv(.SD, paste0("rank", column))
@@ -150,7 +154,7 @@ find_pathway_significance <-
     enrichment_scores[, paste0("enrichment_score", c(1:permutations)) := NULL]
     enrichment_scores[, normalized_enrichment_score := (enrichment_score_observed - permutation_mean) / permutation_sd]
     enrichment_scores[, `p-value` := 1-pnorm(normalized_enrichment_score)]
-    enrichment_scores[, `q-value` := qvalue::qvalue(`p-value`, fdr.level=0.05)$qvalues]
+    enrichment_scores[, `q-value` := qvalue::qvalue(`p-value`, fdr.level=0.05, lambda = 0)$qvalues]
     enrichment_scores[, c("permutation_mean", "permutation_sd", "normalized_enrichment_score") := NULL]
     
     # Calculate the running enrichment scores per gene using the same method as

@@ -44,6 +44,7 @@
 #' gwas_data <- load_GWAS_data(tassel, "TASSEL")
 load_GWAS_data <- function(files,
                            input_type,
+                           mode = "homozygous",
                            trait = "Trait",
                            marker = "Marker",
                            locus = "Locus",
@@ -55,27 +56,44 @@ load_GWAS_data <- function(files,
                            effects_marker = "Marker",
                            effects_locus = "Locus",
                            effects_site = "Site",
+                           effects_allele = "Allele",
                            update_progress = NULL) {
   
   # Make a vector of column names provided by the user.
   association_columns <- c(trait, 
-                          marker, 
-                          locus, 
-                          site, 
-                          p, 
-                          marker_R2)
+                           marker, 
+                           locus, 
+                           site, 
+                           p, 
+                           marker_R2)
   
   effects_columns <- c(effects_trait, 
-                      effects_marker, 
-                      effects_locus, 
-                      effects_site, 
-                      effect)
+                       effects_marker, 
+                       effects_locus, 
+                       effects_site,
+                       effects_allele,
+                       effect)
   
   # Compare the length of the input files vector and the type of analysis
   #   requested.
   # If length of the input files vector and input type match, continue.
   # Otherwise, fail with an error message.
   if (length(files) == 1 & input_type == "single") {
+    
+    # Check the headers of the data to be sure that all user-requested
+    #   columns exist.
+    # If they don't, throw an error and exit.
+    header = data.table::fread(files[1], nrows = 1, header = FALSE)
+    column_check <- c(association_columns, effect) %in% unlist(header)
+    names(column_check) = c(association_columns, effect)
+    if (!all(column_check)) {
+      stop(paste0("Could not find the following columns in data: ", 
+                  paste(unlist(attr(column_check[column_check == FALSE], "names")), collapse = ", "),
+                  "\n",
+                  "Column names in data are: ",
+                  paste(unlist(header), collapse = ", "))
+      )
+    }
     
     # Read the file and select its columns.
     # Set the names to values used throughout PAST instead of what the user
@@ -96,6 +114,33 @@ load_GWAS_data <- function(files,
     
   } else if (length(files) == 2 & input_type == "two") {
     
+    # Check the headers of the data to be sure that all user-requested
+    #   columns exist.
+    # If they don't, throw an error and exit.
+    association_header = data.table::fread(files[1], nrows = 1, header = FALSE)
+    column_check <- association_columns %in% unlist(association_header)
+    names(column_check) = association_columns
+    if (!all(column_check)) {
+      stop(paste0("Could not find the following columns in association data: ", 
+                  paste(unlist(attr(column_check[column_check == FALSE], "names")), collapse = ", "),
+                  "\n",
+                  "Column names in association data are: ",
+                  paste(unlist(association_header), collapse = ", "))
+      )
+    }
+    
+    effects_header = data.table::fread(files[2], nrows = 1, header = FALSE)
+    column_check <- effects_columns %in% unlist(effects_header)
+    names(column_check) = effects_columns
+    if (!all(column_check)) {
+      stop(paste0("Could not find the following columns in effects data: ", 
+                  paste(unlist(attr(column_check[column_check == FALSE], "names")), collapse = ", "),
+                  "\n",
+                  "Column names in effects data are: ",
+                  paste(unlist(effects_header), collapse = ", "))
+      )
+    }
+    
     # Read the file and select its columns.
     # Set the names to values used throughout PAST instead of what the user
     #   provided.
@@ -103,11 +148,11 @@ load_GWAS_data <- function(files,
     # Key the data by the marker columns.
     associations <- data.table::fread(files[1], select = association_columns)
     data.table::setnames(associations, association_columns, c("trait",
-                                                  "marker_original",
-                                                  "chromosome",
-                                                  "position",
-                                                  "p-value",
-                                                  "marker_R2"))
+                                                              "marker_original",
+                                                              "chromosome",
+                                                              "position",
+                                                              "p-value",
+                                                              "marker_R2"))
     associations[,marker:=paste(chromosome, position, sep = "_")]
     data.table::setkey(associations, marker)
     
@@ -119,10 +164,10 @@ load_GWAS_data <- function(files,
     # Key the data by the marker columns.
     effects <- data.table::fread(files[2], select = effects_columns)
     data.table::setnames(effects, effects_columns, c("trait",
-                                         "marker_original",
-                                         "chromosome",
-                                         "position",
-                                         "effect"))
+                                                     "marker_original",
+                                                     "chromosome",
+                                                     "position",
+                                                     "effect"))
     effects[
       ,marker:=paste(chromosome, position, sep = "_")][
         ,c("trait", "marker_original", "chromosome", "position") := NULL
@@ -135,18 +180,46 @@ load_GWAS_data <- function(files,
     
   } else if (length(files) == 2 & input_type == "TASSEL") {
     
+    # Check the headers of the data to be sure that all user-requested
+    #   columns exist.
+    # If they don't, throw an error and exit.
+    association_header = data.table::fread(files[1], nrows = 1, header = FALSE)
+    column_check <- association_columns %in% unlist(association_header)
+    names(column_check) = association_columns
+    if (!all(column_check)) {
+      stop(paste0("Could not find the following columns in association data: ", 
+                  paste(unlist(attr(column_check[column_check == FALSE], "names")), collapse = ", "),
+                  "\n",
+                  "Column names in association data are: ",
+                  paste(unlist(association_header), collapse = ", "))
+      )
+    }
+    
+    effects_header = data.table::fread(files[2], nrows = 1, header = FALSE)
+    column_check <- effects_columns %in% unlist(effects_header)
+    names(column_check) = effects_columns
+    if (!all(column_check)) {
+      stop(paste0("Could not find the following columns in effects data: ", 
+                  paste(unlist(attr(column_check[column_check == FALSE], "names")), collapse = ", "),
+                  "\n",
+                  "Column names in effects data are: ",
+                  paste(unlist(effects_header), collapse = ", "))
+      )
+    }
+    
     # Read the file and select its columns.
     # Set the names to values used throughout PAST instead of what the user
     #   provided.
     # Create the marker column.
     # Key the data by the marker columns.
     associations <- data.table::fread(files[1], select = association_columns)
+    
     data.table::setnames(associations, association_columns, c("trait",
-                                                  "marker_original",
-                                                  "chromosome",
-                                                  "position",
-                                                  "p-value",
-                                                  "marker_R2"))
+                                                              "marker_original",
+                                                              "chromosome",
+                                                              "position",
+                                                              "p-value",
+                                                              "marker_R2"))
     associations[,marker:=paste(chromosome, position, sep = "_")]
     data.table::setkey(associations, marker)
     
@@ -154,26 +227,61 @@ load_GWAS_data <- function(files,
     # Set the names to values used throughout PAST instead of what the user
     #   provided.
     # Create the marker column.
-    # Find out which markers are biallelic.
-    # Reshape the data so that both effects for each marker on on the same
-    #   line, only keeping the marker column and the first effect.
-    #   (TASSEL's secondary effects are 0.)
-    # Rename the automatically named "1" column to "effect".
+    # Count the number of occurrences of each marker.
+    # Keep all homozygous data and all heterozygous data.
+    #   Heterozygous data has three occurrences per marker and 
+    #   is noted by specific IUPAC codes.
     # Key the data by the marker columns.
     effects <- data.table::fread(files[2], select = effects_columns)
     data.table::setnames(effects, effects_columns, c("trait",
-                                         "marker_original",
-                                         "chromosome",
-                                         "position",
-                                         "effect"))
+                                                     "marker_original",
+                                                     "chromosome",
+                                                     "position",
+                                                     "allele",
+                                                     "effect"))
     effects[,marker:=paste(chromosome, position, sep = "_")]
-    biallelic <- effects[, .(.N), by = .(marker)][N == 2]
-    effects <- data.table::dcast(effects, 
-                                marker ~ rowid(marker), 
-                                value.var = c("effect"))[
-                                  biallelic, c("marker", "1")
-                                  ]
-    data.table::setnames(effects, "1", "effect")
+    effects[, num_occurrences := .(.N), by = .(marker)]
+    effects = effects[order(effect), .SD, marker]
+
+    # Inform user about mode.
+    if (mode == "homozygous") {
+      message("homozygous mode: retain only biallelic homozygous data")
+    } else if (mode == "decreasing") {
+      message("decreasing mode: retain marker with largest negative effect for heterozygous data")
+      one = 1
+      row_choice = "one"
+    } else if (mode == "increasing") {
+      message("increasing mode: retain marker with largest positive effect for heterozygous data")
+      row_choice = ".N"
+    } else if ((mode != "homozygous") & (mode != "increasing" | mode != "decreasing")) {
+      stop("mode must be \n\t\"increasing\" or \"decreasing\" to use heterozygous biallelic data\n\t\"homozygous\" to keep only homozygous biallelic data.")
+    }
+    
+    one = 1
+    heterozygous = c("AGR", "CTY", "CGS", "ATW", "GTK", "ACM")
+    
+    if (mode == "homozygous") {
+      effects = effects[num_occurrences == 2 & effect != 0]
+    } else {
+      number_of_markers = data.table::uniqueN(effects[num_occurrences == 3]$marker)
+      progress <- utils::txtProgressBar(min = 0, max = number_of_markers, style = 3)
+      effects = data.table::rbindlist(
+        list(
+          effects[num_occurrences == 2 & effect != 0],
+          effects[num_occurrences == 3 , {
+            alleles = sort(paste(.SD[, allele], collapse = ""))
+            utils::setTxtProgressBar(progress, .GRP)
+            if (alleles %in% heterozygous) {
+              .SD[effect != 0][get(row_choice)]
+            } else {
+              NULL
+            }
+          }, by = marker][, c("marker", "trait", "marker_original", "chromosome", "position", "allele", "effect", "num_occurrences")]
+        )
+      )
+    }    
+    
+    effects[, c("trait", "marker_original", "chromosome", "position", "allele", "num_occurrences") := NULL]
     data.table::setkey(effects, marker)
     
     # Merge associations with effects by the marker column and drop the 

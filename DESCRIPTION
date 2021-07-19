@@ -1,9 +1,9 @@
-Package: PAST
+Package: PAST2
 Type: Package
 Title: Pathway Association Study Tool (PAST)
 Version: 1.5.0
-Authors@R: c(person("Thrash", "Adam", email = "thrash@igbb.msstate.edu",
-    role = c("cre", "aut")), person("DeOrnellis", "Mason", role = c("aut")))
+Authors@R: c(person("Adam", "Thrash", email = "thrash@igbb.msstate.edu",
+    role = c("cre", "aut")), person("Mason", "DeOrnellis", role = c("aut")))
 Description: PAST takes GWAS output and assigns SNPs to genes, uses those genes
     to find pathways associated with the genes, and plots pathways based on
     significance. Implements methods for reading GWAS input data, finding genes
@@ -17,6 +17,7 @@ Imports:
     qvalue,
     data.table,
     ggplot2,
+    R.utils
 Suggests: 
     knitr,
     rmarkdown

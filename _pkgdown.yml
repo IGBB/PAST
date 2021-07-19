@@ -1,0 +1,12 @@
+template:
+  opengraph:
+    twitter:
+      creator: "@adam_thrash"
+      card: summary
+authors:
+  Adam Thrash:
+    href: http://cv.adamthrash.com
+  IGBB:
+    href: https://www.igbb.msstate.edu
+    html: <img src="https://www.igbb.msstate.edu/img/site/h_msuigbb_w.svg" height="24" />
+

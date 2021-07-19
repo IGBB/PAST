@@ -4,5 +4,8 @@ doc
 .Rbuildignore
 .Rhistory
 .Rproj.user/
-PAST.Rproj
+*.Rproj
 .Rproj.user
+docs
+.DS_store
+debug/
