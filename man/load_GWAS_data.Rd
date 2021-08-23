@@ -5,28 +5,35 @@
 \title{Load GWAS data}
 \usage{
 load_GWAS_data(
-  files,
+  first_file,
+  second_file = NULL,
   input_type,
-  trait = "Trait",
-  marker = "Marker",
-  locus = "Locus",
-  site = "Site",
-  p = "p",
-  marker_R2 = "marker_R2",
-  effect = "Effect",
-  effects_trait = "Trait",
-  effects_marker = "Marker",
-  effects_locus = "Locus",
-  effects_site = "Site",
-  update_progress = NULL
+  mode,
+  trait,
+  marker,
+  locus,
+  site,
+  p,
+  marker_R2,
+  effect,
+  effects_trait = NULL,
+  effects_marker = NULL,
+  effects_locus = NULL,
+  effects_site = NULL,
+  effects_allele = NULL
 )
 }
 \arguments{
-\item{files}{a vector of files - either a single GWAS file, two files with
-separate association and effects data with one marker per line, or two files
-from the output of TASSEL}
+\item{first_file}{a file containing combined GWAS data or containing
+association data}
+
+\item{second_file}{a file containing effects data; only use when first_file
+contains association data}
 
 \item{input_type}{one of "single", "two", or "TASSEL"}
+
+\item{mode}{homozygous or heterozygous; retains either only homozygous data
+or homozygous and heterozygous data}
 
 \item{trait}{the name of the column containing the trait}
 
@@ -42,23 +49,25 @@ from the output of TASSEL}
 
 \item{effect}{the name of the column containing the effect}
 
-\item{effects_trait}{the name of the column containing the trait in the 
+\item{effects_trait}{the name of the column containing the trait in the
 effects file; only used when input_type is "two" or "TASSEL"}
 
-\item{effects_marker}{the name of the column containing the marker in the 
+\item{effects_marker}{the name of the column containing the marker in the
 effects file; only used when input_type is "two" or "TASSEL"}
 
-\item{effects_locus}{the name of the column containing the locus or 
-chromosome in the effects file; only used when input_type is "two" or 
+\item{effects_locus}{the name of the column containing the locus or
+chromosome in the effects file; only used when input_type is "two" or
 "TASSEL"}
 
 \item{effects_site}{the name of the column containing the site or position
 in the effects file; only used when input_type is "two" or "TASSEL"}
 
-\item{update_progress}{used by the PAST Shiny app to report progress}
+\item{effects_allele}{the name of the column containing the allele in the
+effects file; only used when input_type is "TASSEL" and mode is
+"increasing" or "decreasing"}
 }
 \value{
-GWAS data with a marker created from locus/chromosome and 
+GWAS data with a marker created from locus/chromosome and
 site/position, the original marker, locus/chromosome, site/position, p-value,
 marker R^2, and effect for every marker in the input files
 }
@@ -66,19 +75,58 @@ marker R^2, and effect for every marker in the input files
 Load GWAS data
 }
 \examples{
-association = system.file("extdata", "association.txt.gz", package = "PAST", 
-  mustWork = TRUE)
-effects = system.file("extdata", "effects.txt.gz", package = "PAST", 
-  mustWork = TRUE)
-single = system.file("extdata", "single_gwas.txt.gz", package = "PAST", 
-  mustWork = TRUE)
-effects_single = system.file("extdata", "effects.single_line.txt.gz", 
-  package = "PAST", mustWork = TRUE)
-  
-one_file = c(single_file)
-two_file = c(association_file, effects_single_file)
-tassel = c(association_file, effects_file)
-gwas_data <- load_GWAS_data(one_file, "single")
-gwas_data <- load_GWAS_data(two_file, "two")
-gwas_data <- load_GWAS_data(tassel, "TASSEL")
+association <- system.file("extdata", "association.txt.gz",
+    package = "PAST2",
+    mustWork = TRUE
+)
+effects <- system.file("extdata", "effects.txt.gz",
+    package = "PAST2",
+    mustWork = TRUE
+)
+single <- system.file("extdata", "single_gwas.txt.gz",
+    package = "PAST2",
+    mustWork = TRUE
+)
+effects_single <- system.file("extdata", "effects.single_line.txt.gz",
+    package = "PAST2", mustWork = TRUE
+)
+gwas_data <- load_GWAS_data(
+    single,
+    NULL,
+    "single",
+    "homozygous",
+    trait = "Trait",
+    marker = "Marker",
+    locus = "Locus",
+    site = "Site",
+    p = "p",
+    marker_R2 = "marker_R2",
+    effect = "Effect"
+)
+gwas_data <- load_GWAS_data(
+    association,
+    effects_single,
+    "two",
+    "homozygous",
+    trait = "Trait",
+    marker = "Marker",
+    locus = "Locus",
+    site = "Site",
+    p = "p",
+    marker_R2 = "marker_R2",
+    effect = "Effect"
+)
+gwas_data <- load_GWAS_data(
+    association,
+    effects,
+    "TASSEL",
+    "homozygous",
+    trait = "Trait",
+    marker = "Marker",
+    locus = "Locus",
+    site = "Site",
+    p = "p",
+    marker_R2 = "marker_R2",
+    effect = "Effect"
+)
 }

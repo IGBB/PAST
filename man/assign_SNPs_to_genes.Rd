@@ -8,10 +8,11 @@ assign_SNPs_to_genes(
   gwas_data,
   LD,
   GFF_file,
-  filter_type = c("gene"),
+  filter_type = "gene",
   window,
   r_squared_cutoff,
-  name_attribute
+  name_attribute,
+  debug = FALSE
 )
 }
 \arguments{
@@ -21,6 +22,8 @@ assign_SNPs_to_genes(
 
 \item{GFF_file}{the path to a GFF-formatted of annotations.}
 
+\item{filter_type}{keep only this type of feature from the GFF}
+
 \item{window}{the search window for genes around the SNP}
 
 \item{r_squared_cutoff}{the R^2 value used to determine SNP significance}
@@ -29,6 +32,8 @@ assign_SNPs_to_genes(
 contains the desired gene name (for example, the 9th column might look like
 ID=NNN;Name=NNN;description=NNN - to use the name in the Name field, provide
 "Name")}
+
+\item{debug}{return all SNPs associated with a gene}
 }
 \value{
 a data.table of SNP-gene assignments, reduced to the SNP that best
@@ -40,7 +45,7 @@ Assign SNPs to genes
 \examples{
 example("load_GWAS_data")
 example("load_LD")
-GFF = system.file("extdata", "genes.gff.gz", package = "PAST", 
+GFF = system.file("extdata", "genes.gff.gz", package = "PAST2",
   mustWork = TRUE)
 genes <- assign_SNPs_to_genes(gwas_data, LD, GFF, "gene", 1000, 0.8, "Name")
 }

@@ -39,7 +39,7 @@ the linkage disequilibrium data in a data.table
 Load Linkage Disequilibrium
 }
 \examples{
-LD_file = system.file("extdata","LD.txt.gz", package = "PAST", 
+LD_file = system.file("extdata","LD.txt.gz", package = "PAST2",
 mustWork = TRUE)
-LD <- load_LD(LD_file)
+LD <- load_LD(LD_file, r_squared="R.2")
 }

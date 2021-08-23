@@ -6,7 +6,7 @@
 \usage{
 find_pathway_significance(
   genes,
-  pathways,
+  pathways_file,
   gene_number_cutoff = 5,
   analysis_mode,
   permutations = 1000
@@ -15,19 +15,20 @@ find_pathway_significance(
 \arguments{
 \item{genes}{genes from assign_SNPs_to_genes()}
 
-\item{gene_number_cutoff}{a cut-off for the minimum number of genes in a
-pathway; pathways that don't satisfy this requirement are removed from analysis}
+\item{pathways_file}{a file containing the pathway IDs, their names, and the
+genes in the pathway with one row per gene for every pathway}
 
-\item{analysis_mode}{increasing/decreasing, where increasing analysis mode 
-tests whether pathways are associated with an increase in the measured trait 
-and decreasing analysis mode tests whether pathways are associated with a 
+\item{gene_number_cutoff}{a cut-off for the minimum number of genes in a
+pathway; pathways that don't satisfy this requirement are removed from
+analysis}
+
+\item{analysis_mode}{increasing/decreasing, where increasing analysis mode
+tests whether pathways are associated with an increase in the measured trait
+and decreasing analysis mode tests whether pathways are associated with a
 decrease in the measured trait}
 
 \item{permutations}{How many times to sample the effects data during random
 sampling}
-
-\item{pathways_file}{a file containing the pathway IDs, their names, and the
-genes in the pathway with one row per gene for every pathway}
 }
 \value{
 enrichment data that indicates which pathways are significantly
@@ -39,7 +40,11 @@ Find Pathway Significance
 }
 \examples{
 example("assign_SNPs_to_genes")
-pathways = system.file("extdata", "pathways.txt.gz", package = "PAST", 
+pathways = system.file("extdata", "pathways.txt.gz", package = "PAST2",
 mustWork = TRUE)
-enrichment_data <- find_pathway_significance(genes, pathways, 5, "increasing", 1000)
+enrichment_data <- find_pathway_significance(genes,
+                                             pathways,
+                                             5,
+                                             "increasing",
+                                             1000)
 }

@@ -22,11 +22,14 @@ find_pathway_significance())}
 \item{output_directory}{a directory to save results in; will be created if it
 doesn't exist}
 }
+\value{
+no return
+}
 \description{
 Write tables for pathways based on user-provided filtering strategy.
 }
 \examples{
 example("find_pathway_significance")
 write_enrichment_data(enrichment_data, "q-value", "0.05", tempdir())
-write_enrichment_data(enrichment_data, tempdir())
+write_enrichment_data(enrichment_data, output_directory=tempdir())
 }

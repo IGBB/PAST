@@ -1,5 +1,5 @@
 ---
-title: "PAST"
+title: "PAST2"
 author: "Adam Thrash"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
@@ -8,11 +8,11 @@ vignette: >
   %\VignetteEngine{knitr::rmarkdown}
   \usepackage[utf8]{inputenc}
 ---
-  
+
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(
-collapse = TRUE,
-comment = "#>"
+    collapse = TRUE,
+    comment = "#>"
 )
 ```
 
@@ -58,17 +58,37 @@ The following blocks of code show how to analyze data with PAST from loading in
 the data to plotting the rugplots.
 
 ```{r setup files}
-library(PAST)
-demo_association_file = system.file("extdata", "association.txt.xz", 
-                                    package = "PAST", mustWork = TRUE)
-demo_effects_file = system.file("extdata", "effects.txt.xz", 
-                                package = "PAST", mustWork = TRUE)
-demo_LD_file = system.file("extdata", "LD.txt.xz", 
-                           package = "PAST", mustWork = TRUE)
-demo_genes_file = system.file("extdata", "genes.gff", 
-                              package = "PAST", mustWork = TRUE)
-demo_pathways_file = system.file("extdata", "pathways.txt.xz", 
-                                 package = "PAST", mustWork = TRUE)
+library(PAST2)
+association <- system.file(
+    "extdata", 
+    "association.txt.gz",
+    package = "PAST2",
+    mustWork = TRUE
+)
+effects <- system.file(
+    "extdata", 
+    "effects.txt.gz",
+    package = "PAST2",
+    mustWork = TRUE
+)
+LD_file = system.file(
+    "extdata",
+    "LD.txt.gz", 
+    package = "PAST2", 
+    mustWork = TRUE
+)
+GFF = system.file(
+    "extdata", 
+    "genes.gff.gz", 
+    package = "PAST2", 
+    mustWork = TRUE
+)
+pathways = system.file(
+    "extdata", 
+    "pathways.txt.gz", 
+    package = "PAST2", 
+    mustWork = TRUE
+)
 ```
 
 ## Loading GWAS Data
@@ -100,8 +120,19 @@ the way that TASSEL codes alleles, the last allele estimate for a marker is
 always zero and the other allele estimates are relative to that.
 
 ```{r loading_gwas_data}
-gwas_data <- load_GWAS_data(demo_association_file, 
-                            demo_effects_file)
+gwas_data <- load_GWAS_data(
+    association,
+    effects,
+    "TASSEL",
+    "homozygous",
+    trait = "Trait",
+    marker = "Marker",
+    locus = "Locus",
+    site = "Site",
+    p = "p",
+    marker_R2 = "marker_R2",
+    effect = "Effect"
+)
 ```
 
 ## Loading LD Data
@@ -122,7 +153,7 @@ pairs or Kbp, and although it is correlated, will vary across chromosomal
 regions within a species. Thus, associations can be found between a SNP and a
 causal gene that may be thousands or tens of thousands of base pairs away. 
 ```{r loading_ld_data}
-LD <- load_LD(demo_LD_file)
+LD <- load_LD(LD_file, r_squared = "R.2")
 ```
 
 ## Assigning SNPs to Genes
@@ -146,13 +177,15 @@ all) linked genes.
 column should match the chromosomes in your LD data.
 
 ```{r assigning_SNPs}
-genes <-assign_SNPs_to_genes(gwas_data, 
-                             LD, 
-                             demo_genes_file,
-                             c("gene"),
-                             1000, 
-                             0.8, 
-                             2)
+genes <- assign_SNPs_to_genes(
+    gwas_data, 
+    LD, 
+    GFF, 
+    "gene", 
+    1000, 
+    0.8, 
+    "Name"
+)
 ```
 
 ## Finding Pathway Significance
@@ -187,12 +220,13 @@ in your pathways file must match the gene names in your GFF.
 `PWY-ID\tPathway Description\tGene`
 
 ```{r finding_pathways}
-rugplots_data <- find_pathway_significance(genes, 
-                                           demo_pathways_file, 
-                                           5,
-                                           "increasing", 
-                                           1000, 
-                                           2)
+enrichment_data <- find_pathway_significance(
+    genes,
+    pathways,
+    5,
+    "increasing",
+    1000
+)
 ```
 
 ## Plotting Selected Pathways
@@ -208,11 +242,12 @@ highest point in the curve is the ES for the pathway and is denoted by the
 vertical dashed line.
 
 ```{r plotting}
-plot_pathways(rugplots_data, 
-              "pvalue", 
-              0.02, 
-              "increasing", 
-              tempdir())
+plot_enrichment_data(
+    enrichment_data, 
+    "q-value", 
+    0.02, 
+    tempdir()
+)
 ```
 
 # References

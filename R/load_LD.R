@@ -12,9 +12,9 @@
 #' @export
 #' @import data.table
 #' @examples
-#' LD_file = system.file("extdata","LD.txt.gz", package = "PAST", 
+#' LD_file = system.file("extdata","LD.txt.gz", package = "PAST2",
 #' mustWork = TRUE)
-#' LD <- load_LD(LD_file)
+#' LD <- load_LD(LD_file, r_squared="R.2")
 load_LD <- function(LD_file,
                     locus = "Locus1",
                     position1 = "Position1",
@@ -23,39 +23,25 @@ load_LD <- function(LD_file,
                     site2 = "Site2",
                     distance = "Dist_bp",
                     r_squared = "R^2") {
-  LD_columns = c(locus, position1, site1, position2, site2, distance, r_squared)
-  
-  # Check the headers of the data to be sure that all user-requested
-  #   columns exist.
-  # If they don't, throw an error and exit.
-  LD_header = data.table::fread(LD_file, nrows = 1, header = FALSE)
-  column_check <- LD_columns %in% unlist(LD_header)
-  names(column_check) = LD_columns
-  if (!all(column_check)) {
-    stop(paste0("Could not find the following columns in LD data: ", 
-                paste(unlist(attr(column_check[column_check == FALSE], "names")), collapse = ", "),
-                "\n",
-                "Column names in LD data are: ",
-                paste(unlist(LD_header), collapse = ", "))
+
+
+    arguments <- list(
+        "locus" = locus,
+        "position1" = position1,
+        "site1" = site1,
+        "position2" = position2,
+        "site2" = site2,
+        "distance" = distance,
+        "r_squared" = r_squared
     )
-  }
-  
-  # Read the file and select its columns.
-  # Set the names to values used throughout PAST instead of what the user
-  #   provided.
-  # Make the locus column a character, just in case it isn't.
-  # Drop rows with NA values in the distance or r_squared columns.
-  LD <- data.table::fread(LD_file, 
-                          select = LD_columns, 
-                          na.strings = c("N/A" , "NaN" ))
-  data.table::setnames(LD, LD_columns, c("locus",
-                                         "position1",
-                                         "site1",
-                                         "position2",
-                                         "site2",
-                                         "distance",
-                                         "r_squared"))
-  LD[, locus:=as.character(locus)]
-  LD <- na.omit(LD, cols = c("distance", "r_squared"))
-  return(LD)
+
+    argument_names <- names(arguments)
+    LD_columns <- arguments[
+        argument_names %in% argument_names[argument_names != ""]
+    ]
+
+    LD <- load_file(LD_file, LD_columns)
+    LD[, locus := as.character(locus)]
+    LD <- stats::na.omit(LD, cols = c("distance", "r_squared"))
+    return(LD)
 }

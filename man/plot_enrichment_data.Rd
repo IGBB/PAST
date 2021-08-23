@@ -20,8 +20,13 @@ find_pathway_significance())}
 
 \item{significance_cutoff}{the cut-off value of the significance parameter}
 
-\item{output_directory}{a directory to save results in; will be created if it
+\item{output_directory}{a directory to save results in; will be created if it}
+
+\item{theme}{set image to light or dark theme
 doesn't exist}
+}
+\value{
+no return
 }
 \description{
 Create plots for pathways based on user-provided filtering strategy.
