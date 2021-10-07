@@ -53,7 +53,7 @@ find_pathway_significance <- function(
     }
 
     # Order the pathways data and drop duplicate entries.
-    setkey(pathways)
+    data.table::setkey(pathways)
     pathways <- unique(pathways)
 
     # PAST computes pathway significance based on a null distribution generated
@@ -67,26 +67,28 @@ find_pathway_significance <- function(
     data.table::setnames(effects, "name", "gene")
     data.table::setnames(effects, "effect", "effect0")
     if (analysis_mode == "increasing") {
-        setorder(effects, -effect0)
+        data.table::setorder(effects, -effect0)
     } else if (analysis_mode == "decreasing") {
-        setorder(effects, effect0)
-        effects[, paste("effect", column, sep = "") :=
-                    abs(paste("effect", column, sep = ""))]
+        data.table::setorder(effects, effect0)
     } else {
         stop("Analysis mode must be \"increasing\" or \"decreasing\".")
     }
     effects[, rank0 := as.numeric(.I)]
     columns <- as.character(seq_len(permutations))
     for (column in columns) {
+        effect_column = paste("effect", column, sep = "")
         data.table::set(effects,
-                        j = paste("effect", column, sep = ""),
+                        j = effect_column,
                         value = sample(genes[, effect]))
         if (analysis_mode == "increasing") {
-            setorderv(effects, paste("effect", column, sep = ""), -1)
+            data.table::setorderv(effects, effect_column, -1)
         } else if (analysis_mode == "decreasing") {
-            setorderv(effects, paste("effect", column, sep = ""))
-            effects[, paste("effect", column, sep = "") :=
-                        abs(paste("effect", column, sep = ""))]
+            data.table::setorderv(effects, effect_column)
+            effects[, c(effect_column) := lapply(
+                .SD,
+                function(x) abs(x)),
+                .SDcols = effect_column
+            ]
         } else {
             stop("Analysis mode must be \"increasing\" or \"decreasing\".")
         }
@@ -97,7 +99,7 @@ find_pathway_significance <- function(
     # Count the number of genes overall.
     # Filter pathways such that only genes with an effect are kept.
     number_of_genes <- genes[, .N]
-    enrichment_scores <- copy(pathways[
+    enrichment_scores <- data.table::copy(pathways[
         effects[gene %in% pathways[, gene_id]],
         on = .(gene_id = gene)
     ])
@@ -117,7 +119,7 @@ find_pathway_significance <- function(
             lapply(
                 c(0:permutations),
                 function(column) {
-                    setorderv(.SD, paste0("rank", column))
+                    data.table::setorderv(.SD, paste0("rank", column))
 
                     # Calculate factors.
                     # Factors are calculated by subtracting 1 + the rank of
@@ -193,10 +195,10 @@ find_pathway_significance <- function(
                     "enrichment_score_observed"),
         measure.vars = paste0("enrichment_score", seq_along(c(1, permutations)))
     )
-    setkey(enrichment_scores, pathway_id)
+    data.table::setkey(enrichment_scores, pathway_id)
     enrichment_scores[, permutation_mean := mean(value)]
     enrichment_scores[, permutation_sd := stats::sd(value)]
-    enrichment_scores <- dcast(
+    enrichment_scores <- data.table::dcast(
         enrichment_scores,
         pathway_id +
             pathway_name +
@@ -232,13 +234,13 @@ find_pathway_significance <- function(
     # Calculate the running enrichment scores per gene using the same method as
     #   used for calculating the enrichment score for for a pathway.
     # Keep per-gene enrichment scores, rather than returning the max.
-    running_enrichment_scores <- copy(pathways[
+    running_enrichment_scores <- data.table::copy(pathways[
         effects[gene %in% pathways[, gene_id], .(gene, effect0, rank0)],
         on = .(gene_id = gene)
     ])
-    setnames(running_enrichment_scores, "effect0", "effect")
-    setnames(running_enrichment_scores, "rank0", "rank")
-    setorder(running_enrichment_scores, rank)
+    data.table::setnames(running_enrichment_scores, "effect0", "effect")
+    data.table::setnames(running_enrichment_scores, "rank0", "rank")
+    data.table::setorder(running_enrichment_scores, rank)
     running_enrichment_scores[, enrichment_score := {
 
         # Calculate factors.
