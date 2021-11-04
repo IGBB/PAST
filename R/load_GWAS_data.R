@@ -381,7 +381,7 @@ load_GWAS_data <- function(
                 stop(
                     glue::glue(
                         "PAST expected even rows in the effects file ",
-                        "{files[[2]}} to have effect == 0."
+                        "{files[[2]]} to have effect == 0."
                     )
                 )
             }
