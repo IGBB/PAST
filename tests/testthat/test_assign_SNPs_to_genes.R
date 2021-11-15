@@ -16,7 +16,6 @@ test_that(
             locus = "Locus",
             site = "Site",
             p = "p",
-            marker_R2 = "marker_R2",
             effect = "Effect"
         )
         LD <- load_LD(

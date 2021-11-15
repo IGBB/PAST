@@ -16,7 +16,6 @@ test_that(
             locus = "Locus",
             site = "Site",
             p = "p",
-            marker_R2 = "marker_R2",
             effect = "Effect"
         )
         LD <- load_LD(
@@ -56,6 +55,6 @@ test_that(
             1000
         )
         expect_equal(nrow(enrichment_data), 17)
-        expect_lte(enrichment_data[1]$`p-value`, 0.1)
+        expect_lte(enrichment_data[1]$`p-value`, 0.2)
         expect_gte(enrichment_data[17]$`p-value`, 0.85)
     })

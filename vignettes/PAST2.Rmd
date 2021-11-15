@@ -130,7 +130,6 @@ gwas_data <- load_GWAS_data(
     locus = "Locus",
     site = "Site",
     p = "p",
-    marker_R2 = "marker_R2",
     effect = "Effect"
 )
 ```

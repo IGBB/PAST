@@ -12,7 +12,6 @@
 #' @param locus the name of the column containing the locus or chromosome
 #' @param site the name of the column containing the site or position
 #' @param p the name of the column containing the p-value
-#' @param marker_R2 the name of the column containing the p-value
 #' @param effect the name of the column containing the effect
 #' @param effects_trait the name of the column containing the trait in the
 #' effects file; only used when input_type is "two" or "TASSEL"
@@ -58,7 +57,6 @@
 #'     locus = "Locus",
 #'     site = "Site",
 #'     p = "p",
-#'     marker_R2 = "marker_R2",
 #'     effect = "Effect"
 #' )
 #' gwas_data <- load_GWAS_data(
@@ -71,7 +69,6 @@
 #'     locus = "Locus",
 #'     site = "Site",
 #'     p = "p",
-#'     marker_R2 = "marker_R2",
 #'     effect = "Effect"
 #' )
 #' gwas_data <- load_GWAS_data(
@@ -84,7 +81,6 @@
 #'     locus = "Locus",
 #'     site = "Site",
 #'     p = "p",
-#'     marker_R2 = "marker_R2",
 #'     effect = "Effect"
 #' )
 load_GWAS_data <- function(
@@ -97,7 +93,6 @@ load_GWAS_data <- function(
     locus,
     site,
     p,
-    marker_R2,
     effect,
     effects_trait = NULL,
     effects_marker = NULL,
@@ -116,7 +111,6 @@ load_GWAS_data <- function(
         "locus" = locus,
         "site" = site,
         "p" = p,
-        "marker_R2" = marker_R2,
         "effect" = effect,
         "effects_trait" = effects_trait,
         "effects_marker" = effects_marker,
@@ -192,7 +186,6 @@ load_GWAS_data <- function(
         'locus',
         'site',
         'p',
-        'marker_R2',
         'effect'
     )
 
@@ -495,7 +488,6 @@ load_GWAS_data <- function(
             "chromosome",
             "position",
             "p-value",
-            "marker_R2",
             "effect",
             "marker_original"
         )

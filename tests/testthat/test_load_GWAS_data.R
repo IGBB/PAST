@@ -12,7 +12,6 @@ test_that("Data can be loaded and contains correct number of observations", {
                                      locus = "Locus",
                                      site = "Site",
                                      p = "p",
-                                     marker_R2 = "marker_R2",
                                      effect = "Effect")
     ), 3415)
 })
@@ -45,7 +44,6 @@ test_that("All GWAS-loading functions return same results", {
         locus = "Locus",
         site = "Site",
         p = "p",
-        marker_R2 = "marker_R2",
         effect = "Effect"
     )
     two_data <- load_GWAS_data(
@@ -58,7 +56,6 @@ test_that("All GWAS-loading functions return same results", {
         locus = "Locus",
         site = "Site",
         p = "p",
-        marker_R2 = "marker_R2",
         effect = "Effect"
     )
     TASSEL_data <- load_GWAS_data(
@@ -71,7 +68,6 @@ test_that("All GWAS-loading functions return same results", {
         locus = "Locus",
         site = "Site",
         p = "p",
-        marker_R2 = "marker_R2",
         effect = "Effect"
     )
     expect_equal(single_data, two_data)
