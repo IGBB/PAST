@@ -21,7 +21,7 @@ load_LD <- function(LD_file,
                     site1 = "Site1",
                     position2 = "Position2",
                     site2 = "Site2",
-                    distance = "Dist_bp",
+                    distance = NULL,
                     r_squared = "R^2") {
 
 
@@ -35,12 +35,55 @@ load_LD <- function(LD_file,
         "r_squared" = r_squared
     )
 
+    arguments <- arguments[!sapply(arguments,is.null)]
+
     argument_names <- names(arguments)
     LD_columns <- arguments[
         argument_names %in% argument_names[argument_names != ""]
     ]
 
     LD <- load_file(LD_file, LD_columns)
+
+    # if distance wasn't provided, calculate it
+    if (is.null(distance)) {
+        LD[, distance := abs(position1 - position2)]
+    }
+
+    # pull the sites and remove duplicates, then calculate a new site designation
+    sites = data.table::as.data.table(unique(LD[,site1]))
+    data.table::setnames(sites, "V1", "site_original")
+    sites[,site := as.numeric(.I)]
+
+    # replace site1 and site2 with the newly calculated designations
+    data.table::setnames(LD, "site1", "site1_original")
+    LD = merge(LD, sites, by.x = "site1_original", by.y = "site_original")
+    data.table::setnames(LD, "site", "site1")
+
+    data.table::setnames(LD, "site2", "site2_original")
+    LD = merge(LD, sites, by.x = "site2_original", by.y = "site_original")
+    data.table::setnames(LD, "site", "site2")
+
+    # drop the original sites
+    LD[,c("site1_original", "site2_original") := NULL]
+
+    # reorder the columns
+    data.table::setcolorder(
+        LD,
+        c(
+            "locus",
+            "position1",
+            "site1",
+            "position2",
+            "site2",
+            "distance",
+            "r_squared"
+        )
+    )
+
+    # sort the data by locus, position1, and distance
+    data.table::setorder(LD, locus, position1, distance)
+
+    # clean up the data before returning it
     LD[, locus := as.character(locus)]
     LD <- stats::na.omit(LD, cols = c("distance", "r_squared"))
     return(LD)
