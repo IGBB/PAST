@@ -50,9 +50,17 @@ load_LD <- function(LD_file,
     }
 
     # pull the sites and remove duplicates, then calculate a new site designation
-    sites = data.table::as.data.table(unique(LD[,site1]))
-    data.table::setnames(sites, "V1", "site_original")
+    sites1 = unique(LD[,.(locus, position1, site1)])
+    data.table::setnames(sites1, "position1", "position")
+    data.table::setnames(sites1, "site1", "site")
+    sites2 = unique(LD[,.(locus, position2, site2)])
+    data.table::setnames(sites2, "position2", "position")
+    data.table::setnames(sites2, "site2", "site")
+    sites = unique(rbind(sites1, sites2))
+    data.table::setnames(sites, "site", "site_original")
+    data.table::setorder(sites, locus, position)
     sites[,site := as.numeric(.I)]
+    sites[,c("locus", "position") := NULL]
 
     # replace site1 and site2 with the newly calculated designations
     data.table::setnames(LD, "site1", "site1_original")
