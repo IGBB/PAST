@@ -493,6 +493,9 @@ load_GWAS_data <- function(
         )
     )
 
+    # Convert chromosome to character if it isn't already.
+    gwas_data[, chromosome := as.character(chromosome)]
+
     # Key the data by chromosome/position order.
     data.table::setkeyv(gwas_data, c("chromosome", "position"))
 

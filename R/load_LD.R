@@ -1,7 +1,7 @@
 #' Load Linkage Disequilibrium
 #'
 #' @param LD_file the file containing linkage disequilibrium data
-#' @param locus the name of the column containing the locus or chromosome
+#' @param locus1 the name of the column containing the first locus or chromosome
 #' @param position1 the name of the column containing the first SNP's position
 #' @param site1 the name of the column containing the first SNP's site
 #' @param position2 the name of the column containing second SNP's position
@@ -16,9 +16,10 @@
 #' mustWork = TRUE)
 #' LD <- load_LD(LD_file, r_squared="R.2")
 load_LD <- function(LD_file,
-                    locus = "Locus1",
+                    locus1 = "Locus1",
                     position1 = "Position1",
                     site1 = "Site1",
+                    locus2 = "Locus2",
                     position2 = "Position2",
                     site2 = "Site2",
                     distance = NULL,
@@ -26,9 +27,10 @@ load_LD <- function(LD_file,
 
 
     arguments <- list(
-        "locus" = locus,
+        "locus1" = locus1,
         "position1" = position1,
         "site1" = site1,
+        "locus2" = locus2,
         "position2" = position2,
         "site2" = site2,
         "distance" = distance,
@@ -43,6 +45,11 @@ load_LD <- function(LD_file,
     ]
 
     LD <- load_file(LD_file, LD_columns)
+
+    # remove pairs not on the same chromosome
+    LD <- LD[locus1 == locus2]
+    setnames(LD, "locus1", "locus")
+    LD[, locus2 := NULL]
 
     # if distance wasn't provided, calculate it
     if (is.null(distance)) {

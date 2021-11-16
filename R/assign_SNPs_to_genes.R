@@ -12,6 +12,7 @@
 #' "Name")
 #' @param debug return all SNPs associated with a gene
 #' @import data.table
+#' @import stringr
 #' @return a data.table of SNP-gene assignments, reduced to the SNP that best
 #' represents all SNPs assigned to the same gene for each gene
 #' @export
@@ -55,32 +56,50 @@ assign_SNPs_to_genes <- function(
     #   finding intersections with the tag SNPs
     if (data.table::is.data.table(GFF_file) == FALSE) {
         GFF_columns <- c("seqid", "type", "start", "end", "attributes")
-        GFF <- data.table::fread(
-            GFF_file,
-            select = c("V1", "V3", "V4", "V5", "V9"),
-            col.names = GFF_columns
-        )
+        GFF <- data.table::as.data.table(
+            read.table(
+                GFF_file,
+                comment.char = "#",
+                sep = "\t",
+                header = FALSE,
+                quote=""
+            )
+        )[, c("V1", "V3", "V4", "V5", "V9")]
+        setnames(GFF, c("V1", "V3", "V4", "V5", "V9"), GFF_columns)
         GFF <- GFF[type == filter_type]
-        names <- unique(
-            gsub(
-                "=.+",
-                "",
-                unlist(strsplit(GFF[, attributes], ";")
-                )))
-        GFF[, rep(names) := data.table::tstrsplit(
-            attributes, ";",
-            fixed = TRUE,
-            names = names)
-        ][, attributes := NULL]
-        data.table::setnames(GFF, name_attribute, "name")
-        GFF[, names[names != name_attribute] := NULL]
-        GFF[, name := gsub(".*=", "", name)]
+        attributes = GFF[, data.table::tstrsplit(attributes, ";", fixed = TRUE)]
+        names = apply(
+            attributes,
+            1,
+            function(row) {
+                names(attributes)[
+                    which(
+                        stringr::str_detect(
+                            row,
+                            paste0(name_attribute, "=")
+                        )
+                    )
+                ]
+            }
+        )
+
+        for (row in 1:nrow(GFF)){
+            set(
+                GFF,
+                i = row,
+                j = name_attribute,
+                value = stringr::str_replace(
+                    as.character(attributes[row, names[row], with = FALSE]),
+                    paste0(name_attribute, "="),
+                    "")
+            )
+        }
+        GFF[, attributes := NULL]
         GFF[, seqid := as.character(seqid)]
         GFF[, start := start - window]
         GFF[, end := end + window]
         data.table::setkey(GFF, seqid, start, end)
     }
-
 
     genes <- data.table::rbindlist(
         lapply(seq_along(c(1, 2)), function(direction) {
