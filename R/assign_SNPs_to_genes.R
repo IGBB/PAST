@@ -87,7 +87,7 @@ assign_SNPs_to_genes <- function(
             set(
                 GFF,
                 i = row,
-                j = name_attribute,
+                j = "name",
                 value = stringr::str_replace(
                     as.character(attributes[row, names[row], with = FALSE]),
                     paste0(name_attribute, "="),
