@@ -559,7 +559,6 @@ assign_SNPs_to_genes <- function(
     #   linked to the gene, select the SNP with the largest absolute effect.
     # Set the number of linked SNPs to all SNPs linked to the gene.
     # Set the column order and order the data.
-
     genes <- genes[, {
         negative <- .SD[effect < 0, sum(linked_snp_count)]
         positive <- .SD[effect > 0, sum(linked_snp_count)]
@@ -572,12 +571,12 @@ assign_SNPs_to_genes <- function(
             subdata <- subdata[1L]
         } else if (negative == positive) {
             max_positive <- data.table::setorder(
-                subdata[effect > 0],
+                subdata[effect >= 0],
                 -effect,
                 `p-value`
             )[1L]
             max_negative <- data.table::setorder(
-                subdata[effect < 0],
+                subdata[effect <= 0],
                 effect,
                 `p-value`
             )[1L]
