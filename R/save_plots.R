@@ -19,6 +19,7 @@ plot_enrichment_data <- function(
     significance_cutoff = 1,
     output_directory,
     theme = "dark"
+    analysis_mode = null,
 ) {
 
     # Assign some variables to NULL to pass checks.
@@ -57,15 +58,16 @@ plot_enrichment_data <- function(
         # Set the title.
         # Set the x-axis and y-axis names.
         # Set the theme to minimal.
-        plot <- ggplot2::ggplot(.SD,
-                                ggplot2::aes(
-                                    x = rank,
-                                    y = enrichment_score,
-                                    label = gene_id
-                                )
-        ) +
+        plot <-
+            ggplot2::ggplot(.SD,
+                            ggplot2::aes(
+                                x = rank,
+                                y = enrichment_score,
+                                label = gene_id
+                            )
+            ) +
             ggplot2::geom_line(stat = "identity", color = "#fe4365") +
-            ggplot2::geom_rug(sides = "t", color = "#fe4365") +
+            ggplot2::geom_rug(sides = "t") +
             ggplot2::geom_vline(xintercept = intercept,
                                 color = "red",
                                 linetype = "longdash") +
@@ -73,22 +75,37 @@ plot_enrichment_data <- function(
             ggplot2::labs(x = "Gene Rank", y = "Running Enrichment Score") +
             ggplot2::theme_minimal()
 
+        if (!is.null(analysis_mode)) {
+            plot <- plot + ggplot2::geom_point(
+                size = 2,
+                color = "#A7011F",
+                fill = "#fe4365",
+                ggplot2::aes(shape = gene_effect <= 0)
+            ) +
+                ggplot2::scale_shape_manual(
+                    values = c(24, 25),
+                    guide = "none"
+                )
+        }
+
         if (theme == "dark") {
             # Modify elements of the theme to create a dark theme.
-            plot <- plot + ggplot2::theme(
-                axis.text = ggplot2::element_text(color = "#a1a1a1"),
-                plot.background = ggplot2::element_rect(
-                    color = "#a1a1a1",
-                    fill = "#222831"
-                ),
-                panel.background = ggplot2::element_rect(
-                    color = "#a1a1a1",
-                    fill = "#222831"
-                ),
-                plot.title = ggplot2::element_text(color = "#a1a1a1"),
-                axis.title = ggplot2::element_text(color = "#a1a1a1"),
-                panel.grid.minor = ggplot2::element_blank()
-            )
+            plot <- plot +
+                ggplot2::geom_rug(sides = "t", color = "#FFFFFF") +
+                ggplot2::theme(
+                    axis.text = ggplot2::element_text(color = "#a1a1a1"),
+                    plot.background = ggplot2::element_rect(
+                        color = "#a1a1a1",
+                        fill = "#222831"
+                    ),
+                    panel.background = ggplot2::element_rect(
+                        color = "#a1a1a1",
+                        fill = "#222831"
+                    ),
+                    plot.title = ggplot2::element_text(color = "#a1a1a1"),
+                    axis.title = ggplot2::element_text(color = "#a1a1a1"),
+                    panel.grid.minor = ggplot2::element_blank()
+                )
         }
 
         ggplot2::ggsave(file.path(

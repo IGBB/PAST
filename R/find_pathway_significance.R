@@ -287,6 +287,35 @@ find_pathway_significance <- function(
             .(pathway_id, gene_id, rank, enrichment_score)
         ],
         on = .(pathway_id)]
-    data.table::setorder(enrichment_data, `q-value`, pathway_id)
+    enrichment_data = merge(
+        enrichment_data,
+        genes[, .(name, effect)],
+        by.x = "gene_id",
+        by.y = "name"
+    )
+    data.table::setnames(enrichment_data, "effect", "gene_effect")
+    enrichment_data[, number_of_hits := .SD[, .N], by = pathway_id]
+    enrichment_data[, number_of_genes := {
+        pathways[pathway_id == .BY$pathway_id, .N]
+    }, by = pathway_id]
+    enrichment_data[, percent_hits := number_of_hits / number_of_genes * 100]
+    data.table::setorder(enrichment_data, `q-value`, pathway_id, rank)
+    data.table::setcolorder(
+        enrichment_data,
+        c(
+            "pathway_id",
+            "pathway_name",
+            "enrichment_score_observed",
+            "p-value",
+            "q-value",
+            "rank",
+            "enrichment_score",
+            "gene_id",
+            "gene_effect",
+            "number_of_hits",
+            "number_of_genes",
+            "percent_hits"
+        )
+    )
     return(enrichment_data)
 }
