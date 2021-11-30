@@ -19,7 +19,7 @@ plot_enrichment_data <- function(
     significance_cutoff = 1,
     output_directory,
     theme = "dark",
-    analysis_mode = null,
+    analysis_mode = null
 ) {
 
     # Assign some variables to NULL to pass checks.
