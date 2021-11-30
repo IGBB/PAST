@@ -18,7 +18,7 @@ plot_enrichment_data <- function(
     significance_measure = "q-value",
     significance_cutoff = 1,
     output_directory,
-    theme = "dark"
+    theme = "dark",
     analysis_mode = null,
 ) {
 
