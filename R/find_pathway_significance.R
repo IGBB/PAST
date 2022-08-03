@@ -113,6 +113,7 @@ find_pathway_significance <- function(
         max = number_of_pathways,
         style = 3
     )
+
     enrichment_scores[
         ,
         (paste0("enrichment_score", c(0:permutations))) :=
@@ -188,16 +189,18 @@ find_pathway_significance <- function(
         "enrichment_score0",
         "enrichment_score_observed"
     )
+
     enrichment_scores <- data.table::melt(
         enrichment_scores,
         id.vars = c("pathway_id",
                     "pathway_name",
                     "enrichment_score_observed"),
-        measure.vars = paste0("enrichment_score", seq_along(c(1, permutations)))
+        measure.vars = paste0("enrichment_score", c(1:permutations))
     )
+
     data.table::setkey(enrichment_scores, pathway_id)
-    enrichment_scores[, permutation_mean := mean(value)]
-    enrichment_scores[, permutation_sd := stats::sd(value)]
+    enrichment_scores[, permutation_mean := mean(value), by = pathway_id]
+    enrichment_scores[, permutation_sd := stats::sd(value), by = pathway_id]
     enrichment_scores <- data.table::dcast(
         enrichment_scores,
         pathway_id +
@@ -209,7 +212,7 @@ find_pathway_significance <- function(
     )
     enrichment_scores[
         ,
-        paste0("enrichment_score", seq_along(c(1, permutations))) := NULL
+        paste0("enrichment_score", c(1:permutations)) := NULL
     ]
     enrichment_scores[
         ,
@@ -223,6 +226,7 @@ find_pathway_significance <- function(
     enrichment_scores[, `q-value` := qvalue::qvalue(`p-value`,
                                                     fdr.level = 0.05,
                                                     lambda = 0)$qvalues]
+
     enrichment_scores[
         ,
         c(

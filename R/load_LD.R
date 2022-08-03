@@ -48,7 +48,7 @@ load_LD <- function(LD_file,
 
     # remove pairs not on the same chromosome
     LD <- LD[locus1 == locus2]
-    setnames(LD, "locus1", "locus")
+    data.table::setnames(LD, "locus1", "locus")
     LD[, locus2 := NULL]
 
     # if distance wasn't provided, calculate it
@@ -101,6 +101,7 @@ load_LD <- function(LD_file,
 
     # clean up the data before returning it
     LD[, locus := as.character(locus)]
+    LD[, distance := as.numeric(distance)]
     LD <- stats::na.omit(LD, cols = c("distance", "r_squared"))
     return(LD)
 }
