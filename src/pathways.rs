@@ -603,7 +603,7 @@ impl Data {
 
             let mut file = File::create(path.join("pathways.csv"))?;
 
-            writeln!(file, "pathway_id,pathway_name,p_value,q_value,percent_hits_in_data,enrichment_score,gene,running_enrichment_score")?;
+            writeln!(file, "pathway_id,pathway_name,p_value,q_value,percent_membership_hits,enrichment_score,gene,running_enrichment_score")?;
             for pathway in self
                 .results
                 .get(&mode)
