@@ -3,13 +3,7 @@
 
 * Installation
 
-Install the Rust toolchanin from https://rustup.rs/.
-
-#+begin_src shell
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-#+end_src
-
-Install =PAST=.
+PAST is installed or built from source using the Rust toolchain. Instructions for installing Rust can be found at https://rustup.rs/.
 
 ** with =cargo install=
 
