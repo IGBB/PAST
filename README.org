@@ -1,0 +1,98 @@
+#+title: PAST - Pathway Analysis Studies Tool
+#+author: Adam Thrash
+
+* Installation
+
+Install the Rust toolchanin from https://rustup.rs/.
+
+#+begin_src shell
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+#+end_src
+
+Install =PAST=.
+
+** with =cargo install=
+
+#+begin_src shell
+cargo install --git https://github.com/IGBB/past
+#+end_src
+
+** from local directory
+
+The following code installs =PAST= to =~/.cargo/bin/past=.
+
+#+begin_src shell
+git clone https://github.com/IGBB/PAST.git
+cargo install --path .
+#+end_src
+
+The following code only builds =PAST=. The executable will located at =target/release/past=.
+
+#+begin_src shell
+git clone https://github.com/IGBB/PAST.git
+cargo build --release
+#+end_src
+
+* Usage
+
+PAST requires input data from three different files:
+
+- annotations in GFF format
+  - these annotations must match the reference genome used for SNP discovery
+  - the gene names in the annotations must match the gene names in the pathways file
+- GWAS data with the following columns
+  - marker
+  - sequence name
+  - position
+  - p-value
+  - effect
+- linkage disequilibrium data with the following columns
+  - first sequence name
+  - first position
+  - second sequence name (optional)
+  - second position
+  - R^{2}
+
+#+begin_src shell
+Pathways Analysis Study Tool
+
+Usage: past [OPTIONS] --annotations <FILE> --gwas <FILE> --linkage-disequilibrium <FILE> --r-squared-cutoff <R_SQUARED_CUTOFF> --pathways <FILE> --mode <MODE> --permutations <PERMUTATIONS>
+
+Options:
+  -a, --annotations <FILE>
+          a file containing annotations formatted as GFF3
+  -x, --attribute <ATTRIBUTE>
+          the attribute that contains gene names that match those in the
+          pathways file [default: ID]
+  -g, --gwas <FILE>
+          a file containing GWAS data
+  -c, --gwas-columns <1,2,3,4,5>
+          a comma-separated value providing column numbers of required GWAS
+          data; column order is marker, sequence name, position, p-value, effect
+  -l, --linkage-disequilibrium <FILE>
+          a file containing linkage disequilibrium data
+  -k, --linkage-columns <1,2,3,4,5>
+          a comma-separated value providing column numbers of required linkage
+          disequilibrium data; column order is first sequence name, first
+          position, second sequence name, second position, R^2
+  -r, --r-squared-cutoff <R_SQUARED_CUTOFF>
+          the value of R^2 at which two SNPs are considered linked [0.0 - 1.0]
+  -d, --drop-different-loci
+          drop linkages between positions with different loci
+  -p, --pathways <FILE>
+          a file containing pathways data
+  -m, --mode <MODE>
+          analysis mode [possible values: increasing, decreasing, both]
+  -n, --permutations <PERMUTATIONS>
+          the number of permutations to determine pathway significance
+  -f, --membership-filter <MEMBERSHIP_FILTER>
+          keep only pathways with this fraction of the genes or higher linked to
+          SNPs in the GWAS data [0.0 - 1.0]
+  -o, --output <DIRECTORY>
+          the directory to which results will be written (will be created if it
+          does not exist) [default: ./]
+  -h, --help
+          Print help (see more with '--help')
+  -V, --version
+          Print version
+#+end_src
