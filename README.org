@@ -1,9 +1,9 @@
 #+title: PAST - Pathway Analysis Studies Tool
 #+author: Adam Thrash
 
-* Installation
+* Installation of PAST 2.0.0-rc.
 
-PAST is installed or built from source using the Rust toolchain. Instructions for installing Rust can be found at https://rustup.rs/.
+The release candidate for PAST 2.0.0 is installed or built from source using the Rust toolchain. Instructions for installing Rust can be found at https://rustup.rs/.
 
 ** with =cargo install=
 
