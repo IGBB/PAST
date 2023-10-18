@@ -39,24 +39,34 @@ pub struct Options {
     #[arg(short = 'x', long, value_name = "ATTRIBUTE", default_value_t = String::from("ID"))]
     pub attribute: String,
 
-    /// a file containing GWAS data
-    #[arg(short, long, value_name = "FILE", value_parser = validate_file)]
-    pub gwas: String,
+    /// a file (or files) containing GWAS data
+    #[arg(short, long, value_name = "FILE", value_parser = validate_file, required = true)]
+    pub gwas: Vec<String>,
 
-    /// a comma-separated value providing column numbers of required GWAS data; column order is marker, sequence name, position, p-value, effect
-    #[arg(short = 'c', long, value_name = "1,2,3,4,5", value_delimiter = ',')]
-    pub gwas_columns: Vec<usize>,
+    /// a comma-separated value providing column numbers of required GWAS data; column order is marker, sequence name, position, p-value, effect; if two files are provided, column order is marker, sequence name, position, p-value for the association file and sequence name, position, effect for the effects file
+    #[arg(short = 'c', long, value_name = "1,2,3,4,5", required = true)]
+    pub gwas_columns: Vec<String>,
+
+    /// GWAS data is bi-allelic data from TASSEL
+    #[arg(short, long)]
+    pub tassel: bool,
 
     /// a file containing linkage disequilibrium data
     #[arg(short, long, value_name = "FILE", value_parser = validate_file)]
     pub linkage_disequilibrium: String,
 
     /// a comma-separated value providing column numbers of required linkage disequilibrium data; column order is first sequence name, first position, second sequence name, second position, R^2
-    #[arg(short = 'k', long, value_name = "1,2,3,4,5", value_delimiter = ',')]
+    #[arg(
+        short = 'k',
+        long,
+        value_name = "1,2,3,4,5",
+        value_delimiter = ',',
+        required = true
+    )]
     pub linkage_columns: Vec<usize>,
 
     /// the value of R^2 at which two SNPs are considered linked [0.0 - 1.0]
-    #[arg(short, long, value_parser = validate_r_squared)]
+    #[arg(short, long, value_parser = validate_r_squared, default_value_t = 0.8)]
     pub r_squared_cutoff: f64,
 
     /// drop linkages between positions with different loci
@@ -72,7 +82,7 @@ pub struct Options {
     pub mode: Mode,
 
     /// the number of permutations to determine pathway significance
-    #[arg(short = 'n', long)]
+    #[arg(short = 'n', long, default_value_t = 1000)]
     pub permutations: usize,
 
     /// keep only pathways with this fraction of the genes or higher linked to SNPs in the GWAS data [0.0 - 1.0]

@@ -1,5 +1,5 @@
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     fmt, fs,
     hash::{Hash, Hasher},
     io::{BufRead, BufReader},
@@ -54,19 +54,29 @@ impl fmt::Display for Data {
 }
 
 impl Data {
-    pub fn new<S: AsRef<str>>(filename: S, columns: &[usize], header: bool) -> Result<Self> {
+    pub fn new<S: AsRef<str>>(
+        filenames: Vec<S>,
+        columns_strings: &[String],
+        header: bool,
+        tassel: bool,
+    ) -> Result<Self> {
         // Initialize variables to store data.
         let mut record_data: Vec<&str>;
         let mut snps: HashMap<String, Snp> = HashMap::new();
 
         // Open file and get lines.
-        let buff_reader = BufReader::new(fs::File::open(filename.as_ref())?);
+        let buff_reader = BufReader::new(fs::File::open(filenames[0].as_ref())?);
         let mut lines = buff_reader.lines();
 
         // Skip the first line if the file has a header.
         if header {
             lines.next();
         }
+
+        let columns: Vec<usize> = columns_strings[0]
+            .split(',')
+            .map(|column| column.parse().expect("could not parse column as usize"))
+            .collect();
 
         // Loop over all lines.
         for record in lines.flatten() {
@@ -85,6 +95,17 @@ impl Data {
                 .expect("could not parse position as integer");
             let key = format!("{}_{}", reference_sequence_name, position);
 
+            // Get the effect or initialize it for later.
+            let effect = if filenames.len() == 1 {
+                record_data
+                    .get(columns[4] - 1)
+                    .expect("could not get effect from record")
+                    .parse::<f64>()
+                    .expect("could not parse effect as float")
+            } else {
+                0.0
+            };
+
             // Store the SNP by key.
             snps.insert(
                 key,
@@ -94,11 +115,7 @@ impl Data {
                         .expect("could not get p_value from record")
                         .parse::<f64>()
                         .expect("could not parse p-value as float"),
-                    effect: record_data
-                        .get(columns[4] - 1)
-                        .expect("could not get effect from record")
-                        .parse::<f64>()
-                        .expect("could not parse effect as float"),
+                    effect,
                     linkages: Vec::new(),
                     marker: record_data
                         .get(columns[0] - 1)
@@ -106,6 +123,57 @@ impl Data {
                         .to_string(),
                 },
             );
+        }
+
+        if filenames.len() == 2 {
+            let mut keys: HashSet<String> = HashSet::new();
+
+            // Open file and get lines.
+            let buff_reader = BufReader::new(fs::File::open(filenames[1].as_ref())?);
+            let mut lines = buff_reader.lines();
+
+            // Skip the first line if the file has a header.
+            if header {
+                lines.next();
+            }
+
+            let columns: Vec<usize> = columns_strings[1]
+                .split(',')
+                .map(|column| column.parse().expect("could not parse column as usize"))
+                .collect();
+
+            // Loop over all lines.
+            for record in lines.flatten() {
+                // Split the line on TAB characters.
+                record_data = record.split('\t').collect::<Vec<&str>>();
+
+                // Get the reference sequence name and position to create a key.
+                let reference_sequence_name = record_data
+                    .get(columns[0] - 1)
+                    .expect("could not get reference_sequence_name from record")
+                    .to_string();
+                let position = record_data
+                    .get(columns[1] - 1)
+                    .expect("could not get position from record")
+                    .parse::<i32>()
+                    .expect("could not parse position as integer");
+                let key = format!("{}_{}", reference_sequence_name, position);
+
+                // Get the effect.
+                let effect = record_data
+                    .get(columns[2] - 1)
+                    .expect("could not get effect from record")
+                    .parse::<f64>()
+                    .expect("could not parse effect as float");
+
+                // Update the SNP's effect by key.
+                if !tassel || !keys.contains(&key) {
+                    snps.entry(key.clone())
+                        .and_modify(|snp| snp.effect = effect);
+                }
+
+                keys.insert(key);
+            }
         }
 
         Ok(Self { snps })

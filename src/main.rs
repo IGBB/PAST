@@ -19,7 +19,7 @@ fn main() -> Result<()> {
     )?;
 
     // Read GWAS data.
-    let mut gwas = gwas::Data::new(options.gwas, &options.gwas_columns, true)?;
+    let mut gwas = gwas::Data::new(options.gwas, &options.gwas_columns, true, options.tassel)?;
 
     // Link SNPs using linkage disequilibrium data.
     gwas.link(
