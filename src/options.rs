@@ -1,8 +1,9 @@
+use std::fmt;
 use std::path::Path;
 
 use clap::{Parser, ValueEnum};
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
 pub enum Mode {
     /// Find pathways associated with an increase in the trait
     Increasing,
@@ -19,6 +20,20 @@ impl Mode {
             Mode::Decreasing => vec!["decreasing".into()],
             Mode::Both => vec!["increasing".into(), "decreasing".into()],
         }
+    }
+}
+
+impl fmt::Display for Mode {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match &self {
+                Mode::Increasing => "increasing",
+                Mode::Decreasing => "decreasing",
+                Mode::Both => "both",
+            }
+        )
     }
 }
 
