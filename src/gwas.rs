@@ -3,6 +3,7 @@ use std::{
     fmt, fs,
     hash::{Hash, Hasher},
     io::{BufRead, BufReader},
+    str::FromStr,
 };
 
 use anyhow::{bail, Result};
@@ -88,20 +89,20 @@ impl Data {
                 .get(columns[1] - 1)
                 .expect("could not get reference_sequence_name from record")
                 .to_string();
-            let position = record_data
-                .get(columns[2] - 1)
-                .expect("could not get position from record")
-                .parse::<i32>()
-                .expect("could not parse position as integer");
+
+            let position: i32 = match Self::convert("position", &record_data, &columns, 2) {
+                Ok(value) => value,
+                Err(err) => bail!(err),
+            };
+
             let key = format!("{}_{}", reference_sequence_name, position);
 
             // Get the effect or initialize it for later.
-            let effect = if filenames.len() == 1 {
-                record_data
-                    .get(columns[4] - 1)
-                    .expect("could not get effect from record")
-                    .parse::<f64>()
-                    .expect("could not parse effect as float")
+            let effect: f64 = if filenames.len() == 1 {
+                match Self::convert("effect", &record_data, &columns, 4) {
+                    Ok(value) => value,
+                    Err(err) => bail!(err),
+                }
             } else {
                 0.0
             };
@@ -110,11 +111,10 @@ impl Data {
             snps.insert(
                 key,
                 Snp {
-                    p_value: record_data
-                        .get(columns[3] - 1)
-                        .expect("could not get p_value from record")
-                        .parse::<f64>()
-                        .expect("could not parse p-value as float"),
+                    p_value: match Self::convert("p-value", &record_data, &columns, 3) {
+                        Ok(value) => value,
+                        Err(err) => bail!(err),
+                    },
                     effect,
                     linkages: Vec::new(),
                     marker: record_data
@@ -152,19 +152,18 @@ impl Data {
                     .get(columns[0] - 1)
                     .expect("could not get reference_sequence_name from record")
                     .to_string();
-                let position = record_data
-                    .get(columns[1] - 1)
-                    .expect("could not get position from record")
-                    .parse::<i32>()
-                    .expect("could not parse position as integer");
+                let position: i32 = match Self::convert("position", &record_data, &columns, 1) {
+                    Ok(value) => value,
+                    Err(err) => bail!(err),
+                };
+
                 let key = format!("{}_{}", reference_sequence_name, position);
 
                 // Get the effect.
-                let effect = record_data
-                    .get(columns[2] - 1)
-                    .expect("could not get effect from record")
-                    .parse::<f64>()
-                    .expect("could not parse effect as float");
+                let effect: f64 = match Self::convert("effect", &record_data, &columns, 2) {
+                    Ok(value) => value,
+                    Err(err) => bail!(err),
+                };
 
                 // Update the SNP's effect by key.
                 if !tassel || !keys.contains(&key) {
@@ -208,11 +207,10 @@ impl Data {
             let locus_1 = record_data
                 .get(columns[0] - 1)
                 .expect("could not get locus");
-            let position_1 = record_data
-                .get(columns[1] - 1)
-                .expect("could not get position1")
-                .parse::<i32>()
-                .expect("could not parse position1 as integer");
+            let position_1: i32 = match Self::convert("position_1", &record_data, &columns, 1) {
+                Ok(value) => value,
+                Err(err) => bail!(err),
+            };
             let locus_2 = if drop_different_loci {
                 record_data
                     .get(columns[2] - 1)
@@ -220,44 +218,42 @@ impl Data {
             } else {
                 locus_1
             };
-            let position_2 = if drop_different_loci {
-                record_data
-                    .get(columns[2] - 1)
-                    .expect("could not get position2")
-                    .parse::<i32>()
-                    .expect("could not parse position2 as integer")
+            let position_2: i32 = if drop_different_loci {
+                match Self::convert("position_2", &record_data, &columns, 3) {
+                    Ok(value) => value,
+                    Err(err) => bail!(err),
+                }
             } else {
-                record_data
-                    .get(columns[3] - 1)
-                    .expect("could not get position2")
-                    .parse::<i32>()
-                    .expect("could not parse position2 as integer")
+                match Self::convert("position_2", &record_data, &columns, 2) {
+                    Ok(value) => value,
+                    Err(err) => bail!(err),
+                }
             };
 
             // Get the R^2 value.
-            let r_squared = if drop_different_loci {
-                record_data
-                    .get(columns[3] - 1)
-                    .expect("could not get R^2")
-                    .parse::<f64>()
+            let r_squared: f64 = if drop_different_loci {
+                match Self::convert("r_squared", &record_data, &columns, 4) {
+                    Ok(value) => value,
+                    Err(err) => bail!(err),
+                }
             } else {
-                record_data
-                    .get(columns[4] - 1)
-                    .expect("could not get R^2")
-                    .parse::<f64>()
+                match Self::convert("r_squared", &record_data, &columns, 3) {
+                    Ok(value) => value,
+                    Err(err) => bail!(err),
+                }
             };
 
             // If the R^2 value isn't null, check whether the two SNPs should
             // be linked.
-            if let Ok(r_squared) = r_squared {
-                // Link the two SNPs if the loci aren't checked or if they are
-                // the same and the R^2 value is greater than the user-provided
-                // cutoff.
-                if (!drop_different_loci || locus_1 == locus_2) && r_squared >= r_squared_cutoff {
-                    self.link_snps(locus_1, position_1, locus_2, position_2, r_squared)?;
-                    self.link_snps(locus_2, position_2, locus_1, position_1, r_squared)?;
-                }
+            // if let Ok(r_squared) = r_squared {
+            // Link the two SNPs if the loci aren't checked or if they are
+            // the same and the R^2 value is greater than the user-provided
+            // cutoff.
+            if (!drop_different_loci || locus_1 == locus_2) && r_squared >= r_squared_cutoff {
+                self.link_snps(locus_1, position_1, locus_2, position_2, r_squared)?;
+                self.link_snps(locus_2, position_2, locus_1, position_1, r_squared)?;
             }
+            // }
         }
         Ok(())
     }
@@ -286,6 +282,23 @@ impl Data {
             Ok(snp.clone())
         } else {
             bail!("could not get SNP")
+        }
+    }
+
+    fn convert<T: FromStr>(
+        field: &str,
+        record_data: &[&str],
+        columns: &[usize],
+        index: usize,
+    ) -> Result<T, anyhow::Error> {
+        if let Some(returned_value) = record_data.get(columns[index] - 1) {
+            if let Ok(parsed_value) = returned_value.parse::<T>() {
+                Ok(parsed_value)
+            } else {
+                bail!("could not parse {field} ({returned_value}) as numeric")
+            }
+        } else {
+            bail!("could not get {field} from record")
         }
     }
 }
