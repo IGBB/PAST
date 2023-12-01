@@ -13,4 +13,5 @@ clap = { version = "4.3.23", features = ["derive", "wrap_help"] }
 coitrees = "0.2.1"
 noodles = { version = "0.48.0", features = ["gff"] }
 rand = "0.8.5"
+regex = "1.10.2"
 statrs = "0.16.0"

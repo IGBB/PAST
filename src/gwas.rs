@@ -1,12 +1,17 @@
 use std::{
     collections::{HashMap, HashSet},
+    ffi::OsStr,
     fmt, fs,
+    fs::File,
     hash::{Hash, Hasher},
-    io::{BufRead, BufReader},
+    io::{BufRead, BufReader, Lines},
+    iter::Peekable,
+    path::Path,
     str::FromStr,
 };
 
 use anyhow::{bail, Result};
+use regex::Regex;
 
 #[derive(Clone, Debug)]
 pub struct Snp {
@@ -58,7 +63,6 @@ impl Data {
     pub fn new<S: AsRef<str>>(
         filenames: Vec<S>,
         columns_strings: &[String],
-        header: bool,
         tassel: bool,
     ) -> Result<Self> {
         // Initialize variables to store data.
@@ -67,12 +71,10 @@ impl Data {
 
         // Open file and get lines.
         let buff_reader = BufReader::new(fs::File::open(filenames[0].as_ref())?);
-        let mut lines = buff_reader.lines();
+        let mut lines = buff_reader.lines().peekable();
 
-        // Skip the first line if the file has a header.
-        if header {
-            lines.next();
-        }
+        let delimiter = Self::get_delimiter(filenames[0].as_ref(), &mut lines)?;
+        let regex_split = Regex::new(&delimiter).expect("invalid regex");
 
         let columns: Vec<usize> = columns_strings[0]
             .split(',')
@@ -81,8 +83,8 @@ impl Data {
 
         // Loop over all lines.
         for record in lines.flatten() {
-            // Split the line on TAB characters.
-            record_data = record.split('\t').collect::<Vec<&str>>();
+            // Split the line on the delimiter.
+            record_data = regex_split.split(&record).collect::<Vec<&str>>();
 
             // Get the reference sequence name and position to create a key.
             let reference_sequence_name = record_data
@@ -130,12 +132,10 @@ impl Data {
 
             // Open file and get lines.
             let buff_reader = BufReader::new(fs::File::open(filenames[1].as_ref())?);
-            let mut lines = buff_reader.lines();
+            let mut lines = buff_reader.lines().peekable();
 
-            // Skip the first line if the file has a header.
-            if header {
-                lines.next();
-            }
+            let delimiter = Self::get_delimiter(filenames[1].as_ref(), &mut lines)?;
+            let regex_split = Regex::new(&delimiter).expect("invalid regex");
 
             let columns: Vec<usize> = columns_strings[1]
                 .split(',')
@@ -145,7 +145,7 @@ impl Data {
             // Loop over all lines.
             for record in lines.flatten() {
                 // Split the line on TAB characters.
-                record_data = record.split('\t').collect::<Vec<&str>>();
+                record_data = regex_split.split(&record).collect::<Vec<&str>>();
 
                 // Get the reference sequence name and position to create a key.
                 let reference_sequence_name = record_data
@@ -184,30 +184,27 @@ impl Data {
         r_squared_cutoff: f64,
         drop_different_loci: bool,
         columns: &[usize],
-        header: bool,
     ) -> Result<()> {
         // Initialize variables to store data.
         let mut record_data: Vec<&str>;
 
         // Open file and get lines.
         let buff_reader = BufReader::new(fs::File::open(filename.as_ref())?);
-        let mut lines = buff_reader.lines();
+        let mut lines = buff_reader.lines().peekable();
 
-        // Skip the first line if the file has a header.
-        if header {
-            lines.next();
-        }
+        let delimiter = Self::get_delimiter(filename.as_ref(), &mut lines)?;
+        let regex_split = Regex::new(&delimiter).expect("invalid regex");
 
         // Loop over all lines.
         for record in lines.flatten() {
-            // Split the line on TAB characters.
-            record_data = record.split('\t').collect::<Vec<&str>>();
+            // Split the line on the delimiter.
+            record_data = regex_split.split(&record).collect::<Vec<&str>>();
 
             // Get the reference sequence names and positions to create keys.
             let locus_1 = record_data
                 .get(columns[0] - 1)
                 .expect("could not get locus");
-            let position_1: i32 = match Self::convert("position_1", &record_data, &columns, 1) {
+            let position_1: i32 = match Self::convert("position_1", &record_data, columns, 1) {
                 Ok(value) => value,
                 Err(err) => bail!(err),
             };
@@ -219,12 +216,12 @@ impl Data {
                 locus_1
             };
             let position_2: i32 = if drop_different_loci {
-                match Self::convert("position_2", &record_data, &columns, 3) {
+                match Self::convert("position_2", &record_data, columns, 3) {
                     Ok(value) => value,
                     Err(err) => bail!(err),
                 }
             } else {
-                match Self::convert("position_2", &record_data, &columns, 2) {
+                match Self::convert("position_2", &record_data, columns, 2) {
                     Ok(value) => value,
                     Err(err) => bail!(err),
                 }
@@ -232,12 +229,12 @@ impl Data {
 
             // Get the R^2 value.
             let r_squared: f64 = if drop_different_loci {
-                match Self::convert("r_squared", &record_data, &columns, 4) {
+                match Self::convert("r_squared", &record_data, columns, 4) {
                     Ok(value) => value,
                     Err(err) => bail!(err),
                 }
             } else {
-                match Self::convert("r_squared", &record_data, &columns, 3) {
+                match Self::convert("r_squared", &record_data, columns, 3) {
                     Ok(value) => value,
                     Err(err) => bail!(err),
                 }
@@ -300,5 +297,70 @@ impl Data {
         } else {
             bail!("could not get {field} from record")
         }
+    }
+
+    // Get delimiter based on extension or first two lines.
+    fn get_delimiter(
+        filename: &str,
+        lines: &mut Peekable<Lines<BufReader<File>>>,
+    ) -> Result<String> {
+        // Get the header line by iterating.
+        let header_line = lines
+            .next()
+            .expect("could not read line")
+            .expect("could not read header");
+
+        // Get the first line by peeking.
+        let first_line = lines
+            .peek()
+            .expect("could not read line")
+            .as_ref()
+            .expect("could not read first line");
+
+        // Get the delimiter.
+        //   .tsv/.csv imply the delimiter.
+        //   .txt could be TSV, CSV, or fixed width.
+        let delimiter = match Path::new(&filename)
+            .extension()
+            .and_then(OsStr::to_str)
+            .expect("could not get OsStr")
+        {
+            "tsv" => "\t",
+            "csv" => ",",
+            _ => {
+                // Count tabs and commas in header and first line.
+                let tab = (
+                    header_line.matches('\t').count(),
+                    first_line.matches('\t').count(),
+                );
+                let comma = (
+                    header_line.matches(',').count(),
+                    first_line.matches(',').count(),
+                );
+
+                // Check if they have the same number in both lines.
+                let tab_equal = tab.0 == tab.1;
+                let comma_equal = comma.0 == comma.1;
+
+                // Assume <TAB> if unequal number of commas.
+                if tab_equal && !comma_equal {
+                    "\t"
+                // Assume , if unequal number of <TAB>s.
+                } else if comma_equal && !tab_equal {
+                    ","
+                // Assume <TAB> if there are more tabs than ,
+                } else if tab_equal && comma_equal && tab.0 > comma.0 {
+                    "\t"
+                // Assume , if there are more , than <TAB>s
+                } else if tab_equal && comma_equal && comma.0 > tab.0 {
+                    ","
+                // Otherwise, use 1 or more spaces as the delimiter.
+                } else {
+                    r"\s+"
+                }
+            }
+        };
+
+        Ok(delimiter.to_string())
     }
 }
