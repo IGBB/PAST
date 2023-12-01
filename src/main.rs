@@ -1,10 +1,6 @@
-mod annotations;
-mod gwas;
-mod options;
-mod pathways;
-
 use anyhow::Result;
 use clap::Parser;
+use past::{annotations, gwas, options, pathways};
 
 fn main() -> Result<()> {
     // Get command-line options.
