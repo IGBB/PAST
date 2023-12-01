@@ -254,7 +254,8 @@ impl Data {
 
         // Open pathways file and get lines.
         let buff_reader = BufReader::new(fs::File::open(filename.as_ref())?);
-        let lines = buff_reader.lines();
+        let mut lines = buff_reader.lines();
+        let _header = lines.next();
 
         // Iterate over lines.
         for record in lines.flatten() {
