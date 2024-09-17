@@ -94,6 +94,15 @@ impl Pathway {
                     indices.insert(rng.gen_range(0..assignments.len()));
                 }
                 let mut indices: Vec<usize> = indices.iter().copied().collect();
+
+                if self.genes.len() == 1 {
+                    let mut index = indices[0];
+                    while assignments[index].2.2.effect == 0.0 {
+                        index = rng.gen_range(0..assignments.len())
+                    }
+                    indices[0] = index;
+                }
+
                 indices.sort_unstable();
                 let enrichment_scores = Self::process_permutation(&indices, assignments);
 
