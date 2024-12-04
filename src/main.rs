@@ -39,8 +39,7 @@ fn main() -> Result<()> {
         options.membership_filter,
     )?;
 
-    // Write CSVs for pathways and ranked genes.
-    pathways.write_csv(&options.output, &options.mode)?;
-
+    // Write CSVs for pathways and ranked genes and create plots.
+    pathways.create_output(&options.output, &options.mode)?;
     Ok(())
 }

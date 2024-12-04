@@ -8,6 +8,7 @@ use std::{
 };
 
 use anyhow::Result;
+use plotters::prelude::*;
 use rand::Rng;
 use statrs::{
     distribution::{ContinuousCDF, Normal},
@@ -28,6 +29,104 @@ pub struct Pathway {
 }
 
 impl Pathway {
+    pub fn plot(
+        &self,
+        path: &str,
+        assignments: &[(String, usize, (String, i32, Snp))],
+    ) -> Result<()> {
+        let path = Path::new(path).join("plots");
+        fs::create_dir_all(&path)?;
+
+        let ranks: Vec<f32> = assignments
+            .iter()
+            .filter(|(gene, _rank, _snp)| self.genes.contains(gene))
+            .map(|(_gene, rank, _snp)| *rank as f32)
+            .collect();
+
+        // Generate the image name and caption from the pathway ID and pathway name
+        let image = format!(
+            "{}/{}.png",
+            path.to_str().expect("could not convert path to string"),
+            self.id
+        );
+        let caption = format!("{}: {}", self.id, self.name);
+
+        // Create the new image with a white background
+        let root = BitMapBackend::new(&image, (1280, 960)).into_drawing_area();
+        root.fill(&WHITE)?;
+
+        // Split the image into two sections: rug marks and line chart
+        let areas = root.split_vertically(60);
+
+        // Draw the rug marks.
+        // This part of the chart contains the caption.
+        // Left and right margins must be set the same in both sections.
+        // The rectangles are expanded by 15 on each side to make sure they appear.
+        let mut chart = ChartBuilder::on(&areas.0)
+            .caption(caption, ("sans-serif", 30, FontStyle::Bold).into_font())
+            .margin_left(10)
+            .margin_right(20)
+            .margin_top(10)
+            .y_label_area_size(60)
+            .build_cartesian_2d(0f32..25664f32, 0f32..1f32)?;
+        chart.draw_series((0..ranks.len()).map(|index| {
+            Rectangle::new(
+                [
+                    (ranks[index] as f32 - 15_f32, 1f32),
+                    (ranks[index] as f32 + 15_f32, 0f32),
+                ],
+                BLACK.filled(),
+            )
+        }))?;
+
+        // Draw the line chart.
+        // Space is added at the bottom and left sides for the axes labels.
+        let mut chart = ChartBuilder::on(&areas.1)
+            .x_label_area_size(60)
+            .y_label_area_size(60)
+            .margin_left(10)
+            .margin_right(20)
+            .margin_bottom(20)
+            .build_cartesian_2d(0f32..25664f32, 0f32..1f32)?;
+
+        // Draw the grid lines and set up the formatting for the x-axis.
+        chart
+            .configure_mesh()
+            .x_max_light_lines(5)
+            .x_label_formatter(&|v| format!("{:.0}", v))
+            .y_max_light_lines(2)
+            .label_style(("sans-serif", 20, FontStyle::Normal, &BLACK))
+            .x_desc("Gene Rank")
+            .y_desc("Running Enrichment Score")
+            .draw()?;
+
+        // Draw points for the line chart.
+        chart.draw_series((0..ranks.len()).map(|index| {
+            Circle::new(
+                (
+                    ranks[index] as f32,
+                    self.enrichment_scores.as_ref().unwrap()[index] as f32,
+                ),
+                3,
+                RED.filled(),
+            )
+        }))?;
+
+        // Draw the line.
+        chart.draw_series(LineSeries::new(
+            (0..ranks.len()).map(|index| {
+                (
+                    ranks[index] as f32,
+                    self.enrichment_scores.as_ref().unwrap()[index] as f32,
+                )
+            }),
+            &RED,
+        ))?;
+        root.present()?;
+
+        Ok(())
+    }
+
     fn score(
         &mut self,
         assignments: &[(String, usize, (String, i32, Snp))],
@@ -97,7 +196,7 @@ impl Pathway {
 
                 if self.genes.len() == 1 {
                     let mut index = indices[0];
-                    while assignments[index].2.2.effect == 0.0 {
+                    while assignments[index].2 .2.effect == 0.0 {
                         index = rng.gen_range(0..assignments.len())
                     }
                     indices[0] = index;
@@ -575,7 +674,7 @@ impl Data {
     }
 
     // Write genes and pathways data as CSV by mode.
-    pub fn write_csv(&self, output: &str, mode: &Mode) -> Result<()> {
+    pub fn create_output(&self, output: &str, mode: &Mode) -> Result<()> {
         for mode in mode.mode() {
             let path = Path::new(output).join(mode.clone());
             fs::create_dir_all(&path)?;
@@ -619,6 +718,14 @@ impl Data {
                 .get(&mode)
                 .expect("could not find pathways results for mode")
             {
+                pathway
+                    .plot(
+                        path.to_str().expect("could not convert path to string"),
+                        self.assignments
+                            .get(&mode)
+                            .expect("could not find assignments for mdoe"),
+                    )
+                    .expect(&format!("could not plot pathway {}", pathway));
                 for (index, gene) in pathway.genes.iter().enumerate() {
                     writeln!(
                         file,
