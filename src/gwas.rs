@@ -300,7 +300,7 @@ impl Data {
     }
 
     // Get delimiter based on extension or first two lines.
-    fn get_delimiter(
+    pub fn get_delimiter(
         filename: &str,
         lines: &mut Peekable<Lines<BufReader<File>>>,
     ) -> Result<String> {
